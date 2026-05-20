@@ -1,0 +1,56 @@
+import {
+  boolean,
+  integer,
+  jsonb,
+  pgTable,
+  real,
+  serial,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
+
+export const profiles = pgTable("profiles", {
+  id: serial("id").primaryKey(),
+  resumeText: text("resume_text").notNull(),
+  parsedJson: jsonb("parsed_json").notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const searchParams = pgTable("search_params", {
+  id: serial("id").primaryKey(),
+  profileId: integer("profile_id")
+    .notNull()
+    .references(() => profiles.id, { onDelete: "cascade" }),
+  paramsJson: jsonb("params_json").notNull(),
+  isCurrent: boolean("is_current").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const agentSettings = pgTable("agent_settings", {
+  id: integer("id").primaryKey().default(1),
+  paused: boolean("paused").notNull().default(false),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const jobs = pgTable("jobs", {
+  id: serial("id").primaryKey(),
+  urlHash: text("url_hash").notNull().unique(),
+  externalId: text("external_id"),
+  title: text("title").notNull(),
+  company: text("company").notNull(),
+  description: text("description").notNull(),
+  url: text("url").notNull(),
+  location: text("location"),
+  source: text("source").notNull().default("adzuna"),
+  score: real("score"),
+  status: text("status").notNull().default("new"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const paramHistory = pgTable("param_history", {
+  id: serial("id").primaryKey(),
+  beforeJson: jsonb("before_json").notNull(),
+  afterJson: jsonb("after_json").notNull(),
+  triggerPhrases: jsonb("trigger_phrases").notNull().default([]),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
