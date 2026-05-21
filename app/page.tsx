@@ -25,7 +25,7 @@ export default async function Home() {
           <section className="rounded-xl border border-amber-200 bg-amber-50 p-6">
             <h2 className="font-medium text-amber-900">Database not configured</h2>
             <p className="mt-2 text-sm text-amber-800">
-              Set <code className="rounded bg-amber-100 px-1">POSTGRES_URL</code> and run{" "}
+              Set <code className="rounded bg-amber-100 px-1">DATABASE_URL</code> (Neon) and run{" "}
               <code className="rounded bg-amber-100 px-1">npm run db:push</code>. Copy{" "}
               <code className="rounded bg-amber-100 px-1">.env.example</code> to{" "}
               <code className="rounded bg-amber-100 px-1">.env.local</code>.
