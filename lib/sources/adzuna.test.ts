@@ -26,8 +26,25 @@ const adzunaApiResponse = {
   ],
 };
 
+function stubAdzunaCredentials() {
+  vi.stubEnv("ADZUNA_APP_ID", "app-id");
+  vi.stubEnv("ADZUNA_APP_KEY", "app-key");
+}
+
+function mockFetchJson(body: unknown) {
+  return {
+    ok: true,
+    json: async () => body,
+  };
+}
+
 describe("searchAdzuna", () => {
   const fetchMock = vi.fn();
+
+  function requestUrl(): URL {
+    const [url] = fetchMock.mock.calls[0] as [string];
+    return new URL(url);
+  }
 
   beforeEach(() => {
     vi.unstubAllEnvs();
@@ -54,13 +71,20 @@ describe("searchAdzuna", () => {
     warnSpy.mockRestore();
   });
 
-  it("maps Adzuna JSON to NormalizedJob shape", async () => {
+  it("returns an empty array when only one credential is set", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     vi.stubEnv("ADZUNA_APP_ID", "app-id");
-    vi.stubEnv("ADZUNA_APP_KEY", "app-key");
-    fetchMock.mockResolvedValue({
-      ok: true,
-      json: async () => adzunaApiResponse,
-    });
+
+    const jobs = await searchAdzuna(baseParams);
+
+    expect(jobs).toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
+  it("maps Adzuna JSON to NormalizedJob shape", async () => {
+    stubAdzunaCredentials();
+    fetchMock.mockResolvedValue(mockFetchJson(adzunaApiResponse));
 
     const jobs = await searchAdzuna(baseParams);
 
@@ -77,9 +101,53 @@ describe("searchAdzuna", () => {
     ]);
   });
 
+  it("returns an empty array when results are missing from the response", async () => {
+    stubAdzunaCredentials();
+    fetchMock.mockResolvedValue(mockFetchJson({}));
+
+    await expect(searchAdzuna(baseParams)).resolves.toEqual([]);
+  });
+
+  it("returns an empty array when results is null", async () => {
+    stubAdzunaCredentials();
+    fetchMock.mockResolvedValue(mockFetchJson({ results: null }));
+
+    await expect(searchAdzuna(baseParams)).resolves.toEqual([]);
+  });
+
+  it("omits location when the API job has no location field", async () => {
+    stubAdzunaCredentials();
+    fetchMock.mockResolvedValue(
+      mockFetchJson({
+        results: [
+          {
+            id: "99",
+            title: "Engineer",
+            company: { display_name: "Acme" },
+            description: "Work",
+            redirect_url: "https://example.com/jobs/99",
+          },
+        ],
+      })
+    );
+
+    const jobs = await searchAdzuna(baseParams);
+
+    expect(jobs).toEqual([
+      {
+        externalId: "99",
+        title: "Engineer",
+        company: "Acme",
+        description: "Work",
+        url: "https://example.com/jobs/99",
+        location: undefined,
+        source: "adzuna",
+      },
+    ]);
+  });
+
   it("throws when the API response is not ok", async () => {
-    vi.stubEnv("ADZUNA_APP_ID", "app-id");
-    vi.stubEnv("ADZUNA_APP_KEY", "app-key");
+    stubAdzunaCredentials();
     fetchMock.mockResolvedValue({
       ok: false,
       status: 503,
@@ -91,20 +159,46 @@ describe("searchAdzuna", () => {
     );
   });
 
-  it("builds query params from keywords, titles, and location", async () => {
-    vi.stubEnv("ADZUNA_APP_ID", "app-id");
-    vi.stubEnv("ADZUNA_APP_KEY", "app-key");
-    vi.stubEnv("ADZUNA_COUNTRY", "us");
-    fetchMock.mockResolvedValue({
-      ok: true,
-      json: async () => ({ results: [] }),
+  it("defaults what to software engineer when keywords and titles are empty", async () => {
+    stubAdzunaCredentials();
+    fetchMock.mockResolvedValue(mockFetchJson({ results: [] }));
+
+    await searchAdzuna({
+      ...baseParams,
+      keywords: [],
+      titleVariants: [],
     });
+
+    expect(requestUrl().searchParams.get("what")).toBe("software engineer");
+  });
+
+  it("caps results_per_page at 50", async () => {
+    stubAdzunaCredentials();
+    fetchMock.mockResolvedValue(mockFetchJson({ results: [] }));
+
+    await searchAdzuna({ ...baseParams, maxResultsPerCycle: 100 });
+
+    expect(requestUrl().searchParams.get("results_per_page")).toBe("50");
+  });
+
+  it("omits where when locations are empty", async () => {
+    stubAdzunaCredentials();
+    fetchMock.mockResolvedValue(mockFetchJson({ results: [] }));
+
+    await searchAdzuna({ ...baseParams, locations: [] });
+
+    expect(requestUrl().searchParams.has("where")).toBe(false);
+  });
+
+  it("builds query params from keywords, titles, and location", async () => {
+    stubAdzunaCredentials();
+    vi.stubEnv("ADZUNA_COUNTRY", "us");
+    fetchMock.mockResolvedValue(mockFetchJson({ results: [] }));
 
     await searchAdzuna(baseParams);
 
     expect(fetchMock).toHaveBeenCalledOnce();
-    const [url] = fetchMock.mock.calls[0] as [string, RequestInit?];
-    const parsed = new URL(url);
+    const parsed = requestUrl();
 
     expect(parsed.pathname).toBe("/v1/api/jobs/us/search/1");
     expect(parsed.searchParams.get("app_id")).toBe("app-id");
@@ -115,17 +209,11 @@ describe("searchAdzuna", () => {
   });
 
   it("appends remote to the what parameter when remote is true", async () => {
-    vi.stubEnv("ADZUNA_APP_ID", "app-id");
-    vi.stubEnv("ADZUNA_APP_KEY", "app-key");
-    fetchMock.mockResolvedValue({
-      ok: true,
-      json: async () => ({ results: [] }),
-    });
+    stubAdzunaCredentials();
+    fetchMock.mockResolvedValue(mockFetchJson({ results: [] }));
 
     await searchAdzuna({ ...baseParams, remote: true });
 
-    const [url] = fetchMock.mock.calls[0] as [string];
-    const parsed = new URL(url);
-    expect(parsed.searchParams.get("what")).toBe("Software Engineer typescript remote");
+    expect(requestUrl().searchParams.get("what")).toBe("Software Engineer typescript remote");
   });
 });
