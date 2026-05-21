@@ -31,6 +31,7 @@ Autonomous job-search agent: searches Adzuna, scores listings against your resum
    ```bash
    npm run dev
    npm run inngest:dev
+   npm run test:run   # Vitest (no tests yet)
    ```
 
 5. Trigger a cycle manually:
@@ -38,6 +39,16 @@ Autonomous job-search agent: searches Adzuna, scores listings against your resum
    ```bash
    curl -X POST http://localhost:3000/api/agent/run-cycle
    ```
+
+   Update resume separately (optional; does not run search):
+
+   ```bash
+   curl -X POST http://localhost:3000/api/agent/update-resume \
+     -H "Content-Type: application/json" \
+     -d '{"resumeText":"Skills: TypeScript, React | Titles: Software Engineer"}'
+   ```
+
+   Add `"resetSearchParams": true` to regenerate keywords from the new resume (default keeps refined params).
 
    Or send an Inngest event:
 
@@ -65,6 +76,8 @@ Autonomous job-search agent: searches Adzuna, scores listings against your resum
 6. Persist jobs, params, `param_history`
 
 Pause/resume via dashboard or `POST /api/agent/pause` with `{ "paused": true }`.
+
+Resume updates: `POST /api/agent/update-resume` with `{ "resumeText": "..." }` or call `updateProfileResume()` from `lib/profile.ts`.
 
 ## License
 

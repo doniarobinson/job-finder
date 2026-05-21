@@ -1,15 +1,11 @@
 import { NextResponse } from "next/server";
 
 import { runSearchCycle } from "@/lib/agent/runSearchCycle";
+import { adminAuthFailure } from "@/lib/api/adminAuth";
 
 export async function POST(request: Request) {
-  const adminSecret = process.env.ADMIN_SECRET;
-  if (adminSecret) {
-    const header = request.headers.get("x-admin-secret");
-    if (header !== adminSecret) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-  }
+  const denied = adminAuthFailure(request);
+  if (denied) return denied;
 
   try {
     const result = await runSearchCycle();
