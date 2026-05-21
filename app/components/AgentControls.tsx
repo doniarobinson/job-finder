@@ -1,61 +1,62 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export function AgentControls({ initialPaused }: { initialPaused: boolean }) {
-  const [paused, setPaused] = useState(initialPaused);
-  const [status, setStatus] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+import { triggerAgentCycle } from "@/app/actions/agent";
+import type { AgentCycleResult } from "@/lib/types";
 
-  async function toggle(nextPaused: boolean) {
-    setLoading(true);
+function formatCycleResult(result: AgentCycleResult): string {
+  if (result.skippedReason === "paused") {
+    return "Cycle skipped — agent is paused.";
+  }
+  const parts = [
+    `Searched ${result.searched}`,
+    `${result.newJobs} new job${result.newJobs === 1 ? "" : "s"}`,
+  ];
+  if (result.paramsUpdated) parts.push("params updated");
+  return `${parts.join(", ")}.`;
+}
+
+export function AgentControls({ initialPaused }: { initialPaused: boolean }) {
+  const router = useRouter();
+  const [status, setStatus] = useState<string | null>(null);
+  const [cycleLoading, setCycleLoading] = useState(false);
+
+  async function runCycle() {
+    setCycleLoading(true);
     setStatus(null);
     try {
-      const res = await fetch("/api/agent/pause", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paused: nextPaused }),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      const data = (await res.json()) as { paused: boolean };
-      setPaused(data.paused);
-      setStatus(data.paused ? "Agent paused" : "Agent running");
+      const result = await triggerAgentCycle();
+      setStatus(formatCycleResult(result));
+      router.refresh();
     } catch (err) {
-      setStatus(err instanceof Error ? err.message : "Request failed");
+      setStatus(err instanceof Error ? err.message : "Cycle failed");
     } finally {
-      setLoading(false);
+      setCycleLoading(false);
     }
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <span
-        className={`inline-flex rounded-full px-3 py-1 text-sm font-medium ${
-          paused ? "bg-amber-100 text-amber-900" : "bg-emerald-100 text-emerald-900"
-        }`}
-      >
-        {paused ? "Paused" : "Active"}
-      </span>
-      {paused ? (
+    <div className="flex flex-col items-end gap-3">
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        <span
+          className={`inline-flex rounded-full px-3 py-1 text-sm font-medium ${
+            initialPaused ? "bg-amber-100 text-amber-900" : "bg-emerald-100 text-emerald-900"
+          }`}
+        >
+          {initialPaused ? "Paused" : "Active"}
+        </span>
         <button
           type="button"
-          disabled={loading}
-          onClick={() => toggle(false)}
-          className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+          disabled={cycleLoading}
+          onClick={runCycle}
+          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
         >
-          Resume agent
+          {cycleLoading ? "Running cycle…" : "Run cycle now"}
         </button>
-      ) : (
-        <button
-          type="button"
-          disabled={loading}
-          onClick={() => toggle(true)}
-          className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50"
-        >
-          Pause agent
-        </button>
-      )}
-      {status && <p className="text-sm text-zinc-600">{status}</p>}
+      </div>
+      {status && <p className="max-w-md text-right text-sm text-zinc-600">{status}</p>}
     </div>
   );
 }
