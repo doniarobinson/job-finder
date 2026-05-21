@@ -11,13 +11,37 @@ export function isPlaceholderDatabaseUrl(url: string): boolean {
   return PLACEHOLDER_MARKERS.some((marker) => lower.includes(marker));
 }
 
+/** Neon HTTP driver expects a postgres URL with a real host (not build-time placeholders). */
+export function isValidNeonConnectionString(url: string): boolean {
+  const normalized = url.startsWith("postgres://")
+    ? url.replace("postgres://", "postgresql://")
+    : url;
+
+  if (!normalized.startsWith("postgresql://") || isPlaceholderDatabaseUrl(normalized)) {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(normalized);
+    return Boolean(parsed.hostname) && parsed.hostname !== "host";
+  } catch {
+    return false;
+  }
+}
+
+export function normalizeNeonConnectionString(url: string): string {
+  return url.startsWith("postgres://")
+    ? url.replace("postgres://", "postgresql://")
+    : url;
+}
+
 function resolveDatabaseUrl(
   primary: string | undefined,
   fallback?: string | undefined
 ): string | undefined {
   const url = (primary ?? fallback)?.trim();
-  if (!url || isPlaceholderDatabaseUrl(url)) return undefined;
-  return url;
+  if (!url || !isValidNeonConnectionString(url)) return undefined;
+  return normalizeNeonConnectionString(url);
 }
 
 export function getDatabaseUrl(): string | undefined {
