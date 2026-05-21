@@ -39,3 +39,11 @@ export type AgentCycleResult = {
   paramsUpdated: boolean;
   skippedReason?: string;
 };
+
+export type UpdateResumeResult = {
+  profileId: number;
+  parsed: ParsedProfile;
+  searchParams: SearchParams;
+  created: boolean;
+  searchParamsReset: boolean;
+};

@@ -1,15 +1,11 @@
 import { NextResponse } from "next/server";
 
+import { adminAuthFailure } from "@/lib/api/adminAuth";
 import { db, schema } from "@/lib/db";
 
 export async function POST(request: Request) {
-  const adminSecret = process.env.ADMIN_SECRET;
-  if (adminSecret) {
-    const header = request.headers.get("x-admin-secret");
-    if (header !== adminSecret) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-  }
+  const denied = adminAuthFailure(request);
+  if (denied) return denied;
 
   if (!db) {
     return NextResponse.json({ error: "Database not configured" }, { status: 503 });

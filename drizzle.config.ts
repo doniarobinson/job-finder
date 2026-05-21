@@ -6,7 +6,7 @@ const url = getMigrationDatabaseUrl();
 
 if (!url) {
   throw new Error(
-    "Set DATABASE_URL_UNPOOLED or DATABASE_URL (or legacy POSTGRES_URL) for drizzle-kit"
+    "Set DATABASE_URL_UNPOOLED or DATABASE_URL in .env.local (real Neon URLs, not placeholders). Run: npm run db:push"
   );
 }
 
