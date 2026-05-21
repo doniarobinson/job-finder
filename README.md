@@ -1,6 +1,13 @@
 # Job Finder Agent
 
-Autonomous job-search agent: searches Adzuna, scores listings against your resume, and refines search parameters from high-match job descriptions. Built for **Vercel** with **Inngest** orchestration and **Postgres** state.
+**End Goal**
+Autonomous job-search agent: searches jobs API, scores listings against your resume, and refines search parameters from high-match job descriptions. Built for **Vercel/Neon** with **Inngest** orchestration and **Postgres** state.
+
+**TODO**
+
+1. Job listings API search needs to be hooked up
+2. Job API listings search and then search params update will first be done via button instead of on a cron job
+3. Implement cron job - every 24 hours
 
 ## Stack
 
@@ -31,10 +38,15 @@ Autonomous job-search agent: searches Adzuna, scores listings against your resum
    ```bash
    npm run dev
    npm run inngest:dev
-   npm run test:run   # Vitest (no tests yet)
    ```
 
-5. Trigger a cycle manually:
+5. Run tests
+
+   ```bash
+   npm run test:run
+   ```
+
+6. Trigger a cycle manually:
 
    ```bash
    curl -X POST http://localhost:3000/api/agent/run-cycle
@@ -57,7 +69,7 @@ Autonomous job-search agent: searches Adzuna, scores listings against your resum
    # event: job-finder/cycle.run
    ```
 
-6. Open [http://localhost:3000](http://localhost:3000) for the dashboard.
+7. Open [http://localhost:3000](http://localhost:3000) for the dashboard.
 
 ## Deploy (Vercel)
 
