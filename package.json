@@ -15,11 +15,11 @@
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.43",
+    "@neondatabase/serverless": "^1.1.0",
     "ai": "^6.0.185",
     "drizzle-orm": "^0.45.2",
     "inngest": "^4.4.0",
     "next": "16.2.6",
-    "postgres": "^3.4.9",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "zod": "^4.4.3"

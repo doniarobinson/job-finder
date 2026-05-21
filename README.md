@@ -5,7 +5,7 @@ Autonomous job-search agent: searches Adzuna, scores listings against your resum
 ## Stack
 
 - Next.js App Router
-- Drizzle ORM + Postgres (`POSTGRES_URL`)
+- Drizzle ORM + [Neon Postgres](https://neon.com/docs/guides/vercel-managed-integration) (`DATABASE_URL` from Vercel Storage)
 - Inngest (`job-finder/cycle.run` workflow)
 - Adzuna Jobs API
 - Google Gemini (`gemini-2.5-flash` + `gemini-embedding-001`) via Vercel AI SDK (optional; keyword fallback without key)
@@ -18,7 +18,7 @@ Autonomous job-search agent: searches Adzuna, scores listings against your resum
    cp .env.example .env.local
    ```
 
-2. Set `POSTGRES_URL`, `RESUME_TEXT`, Adzuna keys (`ADZUNA_APP_ID`, `ADZUNA_APP_KEY`), and `GOOGLE_GENERATIVE_AI_API_KEY` for Gemini.
+2. Set `DATABASE_URL` (from [Neon on Vercel](https://vercel.com/marketplace/neon) or [Neon Console](https://console.neon.tech)), `RESUME_TEXT`, Adzuna keys, and `GOOGLE_GENERATIVE_AI_API_KEY`.
 
 3. Push schema:
 
@@ -50,10 +50,10 @@ Autonomous job-search agent: searches Adzuna, scores listings against your resum
 
 ## Deploy (Vercel)
 
-1. Import repo, add env vars from `.env.example`.
-2. Connect Postgres (Neon recommended).
+1. Import repo, add env vars from `.env.example` (except database — see step 2).
+2. Add **Neon** from [Vercel Marketplace](https://vercel.com/marketplace/neon) → Storage → Connect Project. This injects `DATABASE_URL` and `DATABASE_URL_UNPOOLED` ([docs](https://neon.com/docs/guides/vercel-managed-integration)). Do not use deprecated Vercel Postgres.
 3. Install [Inngest Vercel integration](https://www.inngest.com/docs/deploy/vercel).
-4. Set `CRON_SECRET`; Vercel Cron hits `/api/cron/trigger-cycle` every 6 hours (see `vercel.json`).
+4. Set `CRON_SECRET`; Vercel Cron hits `/api/cron/trigger-cycle` daily at **7:00 AM Pacific** (`0 14 * * *` UTC — aligned with PDT; during PST standard time it runs at 8:00 AM Pacific unless you change to `0 15 * * *` in `vercel.json`).
 
 ## Agent loop
 

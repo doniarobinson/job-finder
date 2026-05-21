@@ -52,7 +52,7 @@ async function persistSearchParams(profileId: number, params: SearchParams): Pro
 }
 
 export async function runSearchCycle(): Promise<AgentCycleResult> {
-  if (!db) throw new Error("Database not configured (POSTGRES_URL missing)");
+  if (!db) throw new Error("Database not configured (DATABASE_URL missing)");
 
   const [settings] = await db
     .select()

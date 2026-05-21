@@ -58,7 +58,7 @@ export async function ensureBootstrapProfile(): Promise<{
   profileId: number;
   searchParams: SearchParams;
 }> {
-  if (!db) throw new Error("Database not configured (POSTGRES_URL missing)");
+  if (!db) throw new Error("Database not configured (DATABASE_URL missing)");
 
   const [existing] = await db
     .select()

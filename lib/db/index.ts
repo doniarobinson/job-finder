@@ -1,18 +1,19 @@
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
+import { neon } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-http";
 
+import { getDatabaseUrl } from "./env";
 import * as schema from "./schema";
 
-const connectionString = process.env.POSTGRES_URL;
+const connectionString = getDatabaseUrl();
 
 if (!connectionString) {
-  console.warn("POSTGRES_URL is not set; database operations will fail at runtime.");
+  console.warn(
+    "DATABASE_URL is not set; database operations will fail at runtime."
+  );
 }
 
-const client = connectionString
-  ? postgres(connectionString, { max: 1, prepare: false })
-  : null;
+const sql = connectionString ? neon(connectionString) : null;
 
-export const db = client ? drizzle(client, { schema }) : null;
+export const db = sql ? drizzle(sql, { schema }) : null;
 
 export { schema };
