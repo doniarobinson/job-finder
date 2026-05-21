@@ -1,4 +1,8 @@
 import { AgentControls } from "@/app/components/AgentControls";
+import {
+  DatabaseNotConfiguredBanner,
+  DatabaseUnavailableBanner,
+} from "@/app/components/DatabaseStatusBanners";
 import { getDashboardData } from "@/lib/dashboard";
 
 export const dynamic = "force-dynamic";
@@ -21,29 +25,9 @@ export default async function Home() {
       </header>
 
       <main className="mx-auto max-w-5xl space-y-10 px-6 py-10">
-        {data.dbError && (
-          <section className="rounded-xl border border-rose-200 bg-rose-50 p-6">
-            <h2 className="font-medium text-rose-900">Database unavailable</h2>
-            <p className="mt-2 text-sm text-rose-800">{data.dbError}</p>
-            <p className="mt-2 text-sm text-rose-700">
-              The dashboard still loads so you can preview the UI. Fix the connection or run{" "}
-              <code className="rounded bg-rose-100 px-1">npm run db:push</code> when Neon is ready.
-            </p>
-          </section>
-        )}
+        {data.dbError && <DatabaseUnavailableBanner message={data.dbError} />}
 
-        {!data.configured && !data.dbError && (
-          <section className="rounded-xl border border-amber-200 bg-amber-50 p-6">
-            <h2 className="font-medium text-amber-900">Database not configured</h2>
-            <p className="mt-2 text-sm text-amber-800">
-              Set <code className="rounded bg-amber-100 px-1">DATABASE_URL</code> (Neon) in{" "}
-              <code className="rounded bg-amber-100 px-1">.env.local</code>, then run{" "}
-              <code className="rounded bg-amber-100 px-1">npm run db:push</code>. Placeholder
-              values from <code className="rounded bg-amber-100 px-1">.env.example</code> are
-              ignored for local UI preview.
-            </p>
-          </section>
-        )}
+        {!data.configured && !data.dbError && <DatabaseNotConfiguredBanner />}
 
         <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-medium">Current search parameters</h2>

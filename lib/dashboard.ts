@@ -1,6 +1,7 @@
 import { desc, eq } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
+import { formatFriendlyDbError } from "@/lib/db/friendlyError";
 import { searchParamsSchema } from "@/lib/types";
 
 export type DashboardData = {
@@ -32,20 +33,6 @@ const emptyDashboard: DashboardData = {
   currentParams: null,
   paramHistory: [],
 };
-
-function friendlyDbError(error: unknown): string {
-  const message = error instanceof Error ? error.message : "Database unavailable";
-
-  if (message.includes("fetch failed") || message.includes("ECONNREFUSED")) {
-    return "Could not connect to the database. Check DATABASE_URL in .env.local.";
-  }
-
-  if (message.includes("does not exist") || message.includes("Failed query")) {
-    return "Database connected but tables are missing. Run npm run db:push.";
-  }
-
-  return message;
-}
 
 export async function getDashboardData(): Promise<DashboardData> {
   if (!db) {
@@ -103,7 +90,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     console.warn("Dashboard: database unavailable, showing UI without data.", error);
     return {
       ...emptyDashboard,
-      dbError: friendlyDbError(error),
+      dbError: formatFriendlyDbError(error),
     };
   }
 }
