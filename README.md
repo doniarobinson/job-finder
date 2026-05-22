@@ -1,13 +1,14 @@
 # Job Finder Agent
 
-**End Goal**
-Autonomous job-search agent: searches jobs API, scores listings against your resume, and refines search parameters from high-match job descriptions. Built for **Vercel/Neon** with **Inngest** orchestration and **Postgres** state.
+The Job Finder Agent is a fully autonomous agentic AI that works on your behalf to find jobs worth applying to. It starts with your resume—extracting your skills, target roles, and location—then searches live job listings, scores each one against your background, and saves the best matches here. After every run, it learns from the listings that fit well and updates its search terms so the next cycle is smarter than the last.
+
+Built for **Vercel/Neon** with **Inngest** orchestration and **Postgres** state.
 
 **TODO**
 
-1. Job listings API search needs to be hooked up
-2. Job API listings search and then search params update will first be done via button instead of on a cron job
-3. Implement cron job - every 24 hours
+1. ~~Job listings API search needs to be hooked up~~ (Adzuna integrated)
+2. ~~Run search and update search params via the dashboard button before enabling a cron job~~ (manual run in UI)
+3. Implement a cron job to run every 24 hours
 
 ## Stack
 
@@ -40,7 +41,7 @@ Autonomous job-search agent: searches jobs API, scores listings against your res
    npm run inngest:dev
    ```
 
-5. Run tests
+5. Run tests:
 
    ```bash
    npm run test:run
@@ -73,7 +74,7 @@ Autonomous job-search agent: searches jobs API, scores listings against your res
 
 ## Deploy (Vercel)
 
-1. Import repo, add env vars from `.env.example` (except database — see step 2).
+1. Import the repo and add environment variables from `.env.example` (except the database — see step 2).
 2. Add **Neon** from [Vercel Marketplace](https://vercel.com/marketplace/neon) → Storage → Connect Project. This injects `DATABASE_URL` and `DATABASE_URL_UNPOOLED` ([docs](https://neon.com/docs/guides/vercel-managed-integration)). Do not use deprecated Vercel Postgres.
 3. Install [Inngest Vercel integration](https://www.inngest.com/docs/deploy/vercel).
 4. Set `CRON_SECRET`; Vercel Cron hits `/api/cron/trigger-cycle` daily at **7:00 AM Pacific** (`0 14 * * *` UTC — aligned with PDT; during PST standard time it runs at 8:00 AM Pacific unless you change to `0 15 * * *` in `vercel.json`).
@@ -87,7 +88,7 @@ Autonomous job-search agent: searches jobs API, scores listings against your res
 5. Refine params from high-score JDs (guardrails: max 5 keywords/cycle, evidence ≥ 2 jobs)
 6. Persist jobs, params, `param_history`
 
-Pause/resume via dashboard or `POST /api/agent/pause` with `{ "paused": true }`.
+Pause or resume the agent via `POST /api/agent/pause` with `{ "paused": true }`.
 
 Resume updates: `POST /api/agent/update-resume` with `{ "resumeText": "..." }` or call `updateProfileResume()` from `lib/profile.ts`.
 

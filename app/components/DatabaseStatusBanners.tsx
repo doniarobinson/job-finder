@@ -40,8 +40,8 @@ export function DatabaseUnavailableBanner({ message }: { message: string }) {
         The dashboard still loads so you can preview the UI.{" "}
         {onVercel ? (
           <>
-            Check Neon is linked under Vercel Storage, env vars are set for this environment,
-            and schema exists (run{" "}
+            Check that Neon is linked under Vercel Storage, environment variables are set for this
+            deployment, and the schema exists (run{" "}
             <code className="rounded bg-rose-100 px-1">npm run db:push</code> locally with
             production URLs if needed).
           </>

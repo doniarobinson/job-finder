@@ -7,6 +7,7 @@ import {
   defaultSearchParams,
   ensureBootstrapProfile,
   parseResume,
+  rebootstrapProfileFromEnv,
   updateProfileResume,
 } from "./profile";
 
@@ -36,6 +37,32 @@ describe("parseResume", () => {
     const parsed = parseResume("Short bio with no role or skill keywords.");
 
     expect(parsed.titles).toEqual(["Software Engineer"]);
+  });
+
+  it("infers City, ST from the resume header when Locations line is missing", () => {
+    const parsed = parseResume(
+      `Jane Doe
+Brooklyn, NY
+jane@example.com
+
+Experience
+Engineer at Acme`
+    );
+
+    expect(parsed.locations).toEqual(["Brooklyn, NY"]);
+  });
+
+  it("infers location from the experience section when the header has none", () => {
+    const parsed = parseResume(
+      `Jane Doe
+jane@example.com
+
+Experience
+Staff Engineer, Acme — Portland, OR
+2021 – Present`
+    );
+
+    expect(parsed.locations).toEqual(["Portland, OR"]);
   });
 });
 
@@ -246,5 +273,47 @@ describe("ensureBootstrapProfile", () => {
     expect(result.profileId).toBe(1);
     expect(result.searchParams.keywords.length).toBeGreaterThan(0);
     expect(profileDbHoisted.state.profile?.resumeText).toContain("Elixir");
+  });
+});
+
+describe("rebootstrapProfileFromEnv", () => {
+  beforeEach(() => {
+    profileDbHoisted.state.profile = {
+      id: 1,
+      resumeText: "old",
+      parsedJson: { skills: ["legacy"], titles: ["Engineer"], locations: [] },
+    };
+    profileDbHoisted.state.currentParams = {
+      keywords: ["legacy", "stale"],
+      titleVariants: ["Engineer"],
+      locations: [],
+      remote: false,
+      negativeKeywords: [],
+      maxResultsPerCycle: 20,
+    };
+    profileDbHoisted.db.insert.mockClear();
+    profileDbHoisted.db.update.mockClear();
+    vi.unstubAllEnvs();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("throws when RESUME_TEXT is missing", async () => {
+    await expect(rebootstrapProfileFromEnv()).rejects.toThrow(
+      "RESUME_TEXT environment variable is required"
+    );
+  });
+
+  it("re-parses RESUME_TEXT and resets search params", async () => {
+    vi.stubEnv("RESUME_TEXT", "Skills: Rust, Wasm\nTitles: Systems Engineer");
+
+    const result = await rebootstrapProfileFromEnv();
+
+    expect(result.searchParamsReset).toBe(true);
+    expect(result.searchParams.keywords).toContain("Rust");
+    expect(result.searchParams.keywords).not.toContain("legacy");
+    expect(result.parsed.skills).toContain("Rust");
   });
 });

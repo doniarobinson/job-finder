@@ -3,8 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { triggerAgentCycle } from "@/app/actions/agent";
-import type { AgentCycleResult } from "@/lib/types";
+import {
+  triggerAgentCycle,
+  triggerAgentRebootstrap,
+} from "@/app/actions/agent";
+import { useSystemMessage } from "@/app/components/SystemMessage";
+import type { AgentCycleResult, UpdateResumeResult } from "@/lib/types";
 
 function formatCycleResult(result: AgentCycleResult): string {
   if (result.skippedReason === "paused") {
@@ -14,49 +18,77 @@ function formatCycleResult(result: AgentCycleResult): string {
     `Searched ${result.searched}`,
     `${result.newJobs} new job${result.newJobs === 1 ? "" : "s"}`,
   ];
-  if (result.paramsUpdated) parts.push("params updated");
+  if (result.paramsUpdated) parts.push("search params updated");
   return `${parts.join(", ")}.`;
 }
 
-export function AgentControls({ initialPaused }: { initialPaused: boolean }) {
+function formatRebootstrapResult(result: UpdateResumeResult): string {
+  const keywords = result.searchParams.keywords.slice(0, 5).join(", ");
+  const suffix = result.searchParams.keywords.length > 5 ? ", …" : "";
+  return `Re-bootstrapped from RESUME_TEXT — ${result.searchParams.keywords.length} keyword${result.searchParams.keywords.length === 1 ? "" : "s"} (${keywords}${suffix}).`;
+}
+
+export function AgentControls() {
   const router = useRouter();
-  const [status, setStatus] = useState<string | null>(null);
+  const { publishSystemMessage } = useSystemMessage();
   const [cycleLoading, setCycleLoading] = useState(false);
+  const [rebootstrapLoading, setRebootstrapLoading] = useState(false);
+  const busy = cycleLoading || rebootstrapLoading;
 
   async function runCycle() {
     setCycleLoading(true);
-    setStatus(null);
+    publishSystemMessage("Running search cycle…");
     try {
       const result = await triggerAgentCycle();
-      setStatus(formatCycleResult(result));
+      publishSystemMessage(formatCycleResult(result));
       router.refresh();
     } catch (err) {
-      setStatus(err instanceof Error ? err.message : "Cycle failed");
+      publishSystemMessage(err instanceof Error ? err.message : "Cycle failed");
     } finally {
       setCycleLoading(false);
     }
   }
 
+  async function rebootstrap() {
+    if (
+      !window.confirm(
+        "Are you sure you want to re-bootstrap from the RESUME_TEXT environment variable? This overwrites the stored resume and resets search params.",
+      )
+    ) {
+      return;
+    }
+
+    setRebootstrapLoading(true);
+    publishSystemMessage("Re-bootstrapping from RESUME_TEXT…");
+    try {
+      const result = await triggerAgentRebootstrap();
+      publishSystemMessage(formatRebootstrapResult(result));
+      router.refresh();
+    } catch (err) {
+      publishSystemMessage(err instanceof Error ? err.message : "Re-bootstrap failed");
+    } finally {
+      setRebootstrapLoading(false);
+    }
+  }
+
   return (
-    <div className="flex flex-col items-end gap-3">
-      <div className="flex flex-wrap items-center justify-end gap-3">
-        <span
-          className={`inline-flex rounded-full px-3 py-1 text-sm font-medium ${
-            initialPaused ? "bg-amber-100 text-amber-900" : "bg-emerald-100 text-emerald-900"
-          }`}
-        >
-          {initialPaused ? "Paused" : "Active"}
-        </span>
-        <button
-          type="button"
-          disabled={cycleLoading}
-          onClick={runCycle}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-        >
-          {cycleLoading ? "Running cycle…" : "Run cycle now"}
-        </button>
-      </div>
-      {status && <p className="max-w-md text-right text-sm text-zinc-600">{status}</p>}
+    <div className="flex flex-wrap items-center justify-end gap-3">
+      <button
+        type="button"
+        disabled={busy}
+        onClick={rebootstrap}
+        className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50 disabled:opacity-50"
+      >
+        {rebootstrapLoading ? "Re-bootstrapping…" : "Re-bootstrap from env"}
+      </button>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={runCycle}
+        className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+      >
+        {cycleLoading ? "Running cycle…" : "Run cycle now"}
+      </button>
     </div>
   );
 }

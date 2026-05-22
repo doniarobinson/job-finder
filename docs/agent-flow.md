@@ -65,15 +65,15 @@ sequenceDiagram
     Agent->>Neon: same loop as above
     ManualAPI-->>User: JSON result
 
-    Note over User,Neon: Dashboard (read-only UI)
+    Note over User,Neon: Dashboard UI
 
     User->>Dashboard: GET /
     Dashboard->>Neon: jobs, search_params, param_history, paused flag
     Neon-->>Dashboard: data
-    Dashboard-->>User: matches, params, pause/resume
+    Dashboard-->>User: matches and params
 
-    User->>Dashboard: Pause / Resume
-    Dashboard->>Neon: POST /api/agent/pause updates agent_settings
+    User->>Dashboard: Run cycle now (button)
+    Dashboard->>Agent: runSearchCycle (server action)
 ```
 
 ## Entry points
