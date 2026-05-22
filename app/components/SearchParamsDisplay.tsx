@@ -69,6 +69,14 @@ function buildSearchParamRows(params: SearchParams, detailed: boolean): SearchPa
     ...(detailed
       ? [
           {
+            label: "Search radius",
+            value: (
+              <CellPill>
+                25 mi ({params.searchRadiusKm} km)
+              </CellPill>
+            ),
+          },
+          {
             label: "Results per cycle",
             value: <CellPill>{params.maxResultsPerCycle}</CellPill>,
           },

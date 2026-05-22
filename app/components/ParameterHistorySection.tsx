@@ -28,22 +28,29 @@ function EpochDivider({
   );
 }
 
-export function ParameterHistorySection({ history }: { history: ParameterHistoryPage }) {
-  const { entries, page, totalCount, totalPages } = history;
+export function ParameterHistorySection({
+  history,
+}: {
+  history: ParameterHistoryPage;
+}) {
+  const { entries, page, currentEpochCount, totalPages } = history;
 
   return (
     <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
         <h2 className="text-lg font-medium">Parameter history</h2>
-        {totalCount > 0 && (
+        {currentEpochCount > 0 && (
           <p className="text-sm text-zinc-500">
-            {totalCount} saved version{totalCount === 1 ? "" : "s"}
+            {currentEpochCount} saved version
+            {currentEpochCount === 1 ? "" : "s"} in current epoch/era
           </p>
         )}
       </div>
 
       {entries.length === 0 ? (
-        <p className="mt-2 text-sm text-zinc-500">No parameter versions saved yet.</p>
+        <p className="mt-2 text-sm text-zinc-500">
+          No parameter versions saved yet.
+        </p>
       ) : (
         <>
           <ul className="mt-4 space-y-6">
@@ -51,7 +58,10 @@ export function ParameterHistorySection({ history }: { history: ParameterHistory
               <li key={entry.id}>
                 <div className="rounded-lg border border-zinc-100 px-4 py-3">
                   <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <time className="text-sm text-zinc-500" dateTime={entry.createdAt.toISOString()}>
+                    <time
+                      className="text-sm text-zinc-500"
+                      dateTime={entry.createdAt.toISOString()}
+                    >
                       {entry.createdAt.toLocaleString()}
                     </time>
                     {entry.epochLabel && (

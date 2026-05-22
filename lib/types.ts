@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+/** Default Adzuna search radius: 25 miles expressed in km. */
+export const DEFAULT_SEARCH_RADIUS_KM = Math.round(25 * 1.609344);
+
 export const searchParamsSchema = z.object({
   keywords: z.array(z.string()).default([]),
   titleVariants: z.array(z.string()).default([]),
@@ -8,6 +11,7 @@ export const searchParamsSchema = z.object({
   seniority: z.string().optional(),
   negativeKeywords: z.array(z.string()).default([]),
   maxResultsPerCycle: z.number().int().min(1).max(50).default(20),
+  searchRadiusKm: z.number().int().min(1).max(200).default(DEFAULT_SEARCH_RADIUS_KM),
 });
 
 export type SearchParams = z.infer<typeof searchParamsSchema>;

@@ -238,6 +238,7 @@ describe("getParameterHistoryPage", () => {
     expect(history.page).toBe(1);
     expect(history.pageSize).toBe(PARAMETER_HISTORY_PAGE_SIZE);
     expect(history.totalCount).toBe(2);
+    expect(history.currentEpochCount).toBe(2);
     expect(history.totalPages).toBe(1);
     expect(history.entries).toHaveLength(2);
     expect(history.entries[0]?.isCurrent).toBe(true);
@@ -253,5 +254,6 @@ describe("getParameterHistoryPage", () => {
 
     expect(history.entries).toEqual([]);
     expect(history.totalCount).toBe(0);
+    expect(history.currentEpochCount).toBe(0);
   });
 });

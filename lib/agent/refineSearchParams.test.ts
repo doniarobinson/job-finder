@@ -20,6 +20,7 @@ const baseParams: SearchParams = {
   remote: false,
   negativeKeywords: [],
   maxResultsPerCycle: 20,
+  searchRadiusKm: 40,
 };
 
 function job(
@@ -128,5 +129,58 @@ describe("refineSearchParams with Gemini", () => {
     expect(result.next.keywords).toContain("graphql");
     expect(result.next.negativeKeywords).toContain("intern");
     expect(generateObject).toHaveBeenCalledOnce();
+  });
+
+  it("caps sloppy Gemini output to five new keywords after dedupe", async () => {
+    const { generateObject } = await import("ai");
+    vi.mocked(generateObject).mockResolvedValue({
+      object: {
+        addKeywords: [
+          "typescript",
+          "react",
+          "node",
+          "python",
+          "sql",
+          ".NET",
+          "C#",
+          "Full Stack",
+          "Distributed Systems",
+          "Fintech",
+        ],
+        addNegativeKeywords: [],
+        triggerPhrases: ["fintech"],
+      },
+    } as never);
+
+    const current: SearchParams = {
+      ...baseParams,
+      keywords: ["typescript", "react", "node", "python", "sql"],
+    };
+
+    const result = await refineSearchParams(current, [
+      job("fintech graphql typescript", 0.5, { url: "https://example.com/a" }),
+      job("fintech graphql typescript", 0.5, { url: "https://example.com/b" }),
+    ]);
+
+    const newKeywords = result.next.keywords.filter((k) => !current.keywords.includes(k));
+    expect(newKeywords).toHaveLength(5);
+    expect(newKeywords).toEqual([".NET", "C#", "Full Stack", "Distributed Systems", "Fintech"]);
+  });
+
+  it("falls back to heuristics when Gemini throws", async () => {
+    const { generateObject } = await import("ai");
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.mocked(generateObject).mockRejectedValue(new Error("No object generated"));
+
+    const result = await refineSearchParams(baseParams, [
+      job("kubernetes platform typescript role", 0.5, { url: "https://example.com/a" }),
+      job("kubernetes platform typescript role", 0.6, { url: "https://example.com/b" }),
+    ]);
+
+    expect(result.changed).toBe(true);
+    expect(result.next.keywords).toContain("kubernetes");
+    expect(warnSpy).toHaveBeenCalled();
+
+    warnSpy.mockRestore();
   });
 });

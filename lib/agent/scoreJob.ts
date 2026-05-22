@@ -41,8 +41,39 @@ function cosineSimilarity(a: number[], b: number[]): number {
   return dot / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
+export function normalizeJobUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    const adMatch = parsed.pathname.match(/\/ad\/(\d+)/);
+    if (adMatch) {
+      return `${parsed.hostname}/land/ad/${adMatch[1]}`;
+    }
+    return `${parsed.hostname}${parsed.pathname}`;
+  } catch {
+    return url;
+  }
+}
+
+/** Stable per-listing key for dedupe (Adzuna tracking params change the URL each request). */
+export function jobDedupeKey(job: {
+  externalId?: string;
+  url: string;
+  source?: string;
+}): string {
+  const externalId = job.externalId?.trim();
+  if (externalId) {
+    const source = job.source?.trim() || "job";
+    return createHash("sha256")
+      .update(`${source}:${externalId}`)
+      .digest("hex")
+      .slice(0, 32);
+  }
+
+  return hashJobUrl(job.url);
+}
+
 export function hashJobUrl(url: string): string {
-  return createHash("sha256").update(url).digest("hex").slice(0, 32);
+  return createHash("sha256").update(normalizeJobUrl(url)).digest("hex").slice(0, 32);
 }
 
 export async function scoreJobs(

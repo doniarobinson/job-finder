@@ -82,11 +82,39 @@ Built for **Vercel/Neon** with **Inngest** orchestration and **Postgres** state.
 ## Agent loop
 
 1. Load profile + current `search_params`
-2. Search Adzuna
-3. Dedupe by URL hash
-4. Score (embeddings or keyword overlap)
-5. Refine params from high-score JDs (guardrails: max 5 keywords/cycle, evidence ≥ 2 jobs)
+2. Search Adzuna (`what` = primary title, `what_or` = skills, `distance` = 25 mi / 40 km)
+3. Dedupe by URL hash within the current epoch
+4. Score (Gemini embeddings or keyword overlap fallback)
+5. Refine params from high-score JDs (see below)
 6. Persist jobs, params, `param_history`
+
+```mermaid
+flowchart TD
+  A[High-score jobs] --> B{Gemini configured?}
+  B -->|No| H[Frequency heuristics]
+  B -->|Yes| C[Gemini structured output]
+  C --> D{Zod accepts array length ≤ 20?}
+  D -->|No| H
+  D -->|Yes| E[Dedupe vs current keywords]
+  E --> F[Apply at most 5 new keywords / cycle]
+  F --> G[Persist search_params]
+  H --> F
+  C -.->|API or validation error| H
+```
+
+### Parameter refinement guardrails
+
+Gemini is optional but often overshoots prompt limits (e.g. returning 10 keywords when asked for 5). Refinement uses **two layers**:
+
+| Layer | Limit | Purpose |
+|-------|-------|---------|
+| Zod schema on Gemini output | ≤ 20 suggestions | Validation buffer — accept sloppy model output without failing the cycle |
+| App code after dedupe | ≤ 5 keywords / cycle | Actual policy — slow, steady search drift |
+| Stored totals | ≤ 30 keywords, ≤ 20 negative | Cap growth over many cycles |
+
+If Gemini fails entirely (schema rejection, API error, etc.), the cycle **falls back to frequency heuristics** and still completes — jobs from earlier steps are kept.
+
+Evidence gates: score ≥ 0.35 on at least 2 jobs before any refinement runs.
 
 Pause or resume the agent via `POST /api/agent/pause` with `{ "paused": true }`.
 

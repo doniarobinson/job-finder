@@ -8,6 +8,7 @@ import {
   triggerAgentRebootstrap,
 } from "@/app/actions/agent";
 import { useSystemMessage } from "@/app/components/SystemMessage";
+import { formatAgentCycleInProgressMessage } from "@/lib/agent/cycleSteps";
 import type { AgentCycleResult, UpdateResumeResult } from "@/lib/types";
 
 function formatCycleResult(result: AgentCycleResult): string {
@@ -40,7 +41,7 @@ export function AgentControls() {
 
   async function runCycle() {
     setCycleLoading(true);
-    publishSystemMessage("Running search cycle…");
+    publishSystemMessage(formatAgentCycleInProgressMessage());
     try {
       const result = await triggerAgentCycle();
       publishSystemMessage(formatCycleResult(result));

@@ -29,6 +29,7 @@ export type ParameterHistoryPage = {
   page: number;
   pageSize: number;
   totalCount: number;
+  currentEpochCount: number;
   totalPages: number;
 };
 
@@ -65,6 +66,7 @@ const emptyParameterHistoryPage = (page: number): ParameterHistoryPage => ({
   page,
   pageSize: PARAMETER_HISTORY_PAGE_SIZE,
   totalCount: 0,
+  currentEpochCount: 0,
   totalPages: 1,
 });
 
@@ -95,11 +97,22 @@ export async function getParameterHistoryPage(page = 1): Promise<ParameterHistor
 
     const epochs = await listEpochsForProfile(profileId);
     const epochById = new Map(epochs.map((epoch) => [epoch.id, epoch]));
+    const currentEpoch = await ensureCurrentEpoch(profileId);
 
     const [{ value: totalCount }] = await db
       .select({ value: count() })
       .from(schema.searchParams)
       .where(eq(schema.searchParams.profileId, profileId));
+
+    const [{ value: currentEpochCount }] = await db
+      .select({ value: count() })
+      .from(schema.searchParams)
+      .where(
+        and(
+          eq(schema.searchParams.profileId, profileId),
+          eq(schema.searchParams.epochId, currentEpoch.id)
+        )
+      );
 
     const totalPages = Math.max(1, Math.ceil(totalCount / PARAMETER_HISTORY_PAGE_SIZE));
     const clampedPage = Math.min(safePage, totalPages);
@@ -140,6 +153,7 @@ export async function getParameterHistoryPage(page = 1): Promise<ParameterHistor
       page: clampedPage,
       pageSize: PARAMETER_HISTORY_PAGE_SIZE,
       totalCount,
+      currentEpochCount,
       totalPages,
     };
   } catch (error) {

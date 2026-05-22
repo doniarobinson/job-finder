@@ -30,6 +30,7 @@ const hoisted = vi.hoisted(() => {
     remote: false,
     negativeKeywords: [],
     maxResultsPerCycle: 20,
+    searchRadiusKm: 40,
   };
 
   const state = {
@@ -134,10 +135,13 @@ vi.mock("@/lib/sources/adzuna", () => ({
   searchAdzuna: hoisted.searchAdzunaMock,
 }));
 
-vi.mock("@/lib/agent/scoreJob", () => ({
-  hashJobUrl: (url: string) => `hash-${url}`,
-  scoreJobs: hoisted.scoreJobsMock,
-}));
+vi.mock("@/lib/agent/scoreJob", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/agent/scoreJob")>();
+  return {
+    ...actual,
+    scoreJobs: hoisted.scoreJobsMock,
+  };
+});
 
 vi.mock("@/lib/profile", () => ({
   ensureBootstrapProfile: hoisted.ensureBootstrapProfileMock,
@@ -270,8 +274,9 @@ describe("runSearchCycle", () => {
     await expect(runSearchCycle()).rejects.toThrow("Adzuna API error: 429");
   });
 
-  it("dedupes jobs already stored by url hash", async () => {
-    hoisted.state.existingJobRows = [{ urlHash: "hash-https://example.com/jobs/1" }];
+  it("dedupes jobs already stored in the current epoch", async () => {
+    const { jobDedupeKey } = await import("./scoreJob");
+    hoisted.state.existingJobRows = [{ urlHash: jobDedupeKey(adzunaJobs[0]!) }];
     hoisted.refineSearchParamsMock.mockResolvedValue({
       next: hoisted.initialParams,
       triggerPhrases: [],

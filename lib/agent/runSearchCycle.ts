@@ -2,7 +2,7 @@ import { and, desc, eq, inArray } from "drizzle-orm";
 
 import { ensureCurrentEpoch } from "@/lib/agent/epochs";
 import { refineSearchParams } from "@/lib/agent/refineSearchParams";
-import { hashJobUrl, scoreJobs } from "@/lib/agent/scoreJob";
+import { jobDedupeKey, scoreJobs } from "@/lib/agent/scoreJob";
 import { db, schema } from "@/lib/db";
 import { ensureBootstrapProfile } from "@/lib/profile";
 import { searchAdzuna } from "@/lib/sources/adzuna";
@@ -85,23 +85,29 @@ export async function runSearchCycle(): Promise<AgentCycleResult> {
   const epoch = await ensureCurrentEpoch(profileId);
 
   const rawJobs = await searchAdzuna(params);
-  const urlHashes = rawJobs.map((j) => hashJobUrl(j.url));
+  const dedupeKeys = rawJobs.map((j) => jobDedupeKey(j));
 
   const existing =
-    urlHashes.length > 0
+    dedupeKeys.length > 0
       ? await db
           .select()
           .from(schema.jobs)
           .where(
             and(
               eq(schema.jobs.epochId, epoch.id),
-              inArray(schema.jobs.urlHash, urlHashes)
+              inArray(schema.jobs.urlHash, dedupeKeys)
             )
           )
       : [];
 
   const existingHashes = new Set(existing.map((j) => j.urlHash));
-  const newJobs = rawJobs.filter((j) => !existingHashes.has(hashJobUrl(j.url)));
+  const seenInBatch = new Set<string>();
+  const newJobs = rawJobs.filter((j) => {
+    const key = jobDedupeKey(j);
+    if (existingHashes.has(key) || seenInBatch.has(key)) return false;
+    seenInBatch.add(key);
+    return true;
+  });
 
   const scored = await scoreJobs(profileRow.resumeText, profile, newJobs);
 
@@ -109,7 +115,7 @@ export async function runSearchCycle(): Promise<AgentCycleResult> {
     await db.insert(schema.jobs).values(
       scored.map((job) => ({
         epochId: epoch.id,
-        urlHash: hashJobUrl(job.url),
+        urlHash: jobDedupeKey(job),
         externalId: job.externalId,
         title: job.title,
         company: job.company,

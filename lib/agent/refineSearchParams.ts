@@ -8,13 +8,24 @@ import {
   type SearchParams,
 } from "@/lib/types";
 
-const MAX_KEYWORDS_PER_CYCLE = 5;
+/** Keywords actually applied to search params each cycle. */
+export const MAX_KEYWORDS_PER_CYCLE = 5;
+
+/** Negative keywords applied each cycle. */
+export const MAX_NEGATIVE_KEYWORDS_PER_CYCLE = 3;
+
+/**
+ * Loose Zod cap on Gemini's structured output. Models often overshoot "up to N"
+ * in the prompt; we accept a larger array here and enforce MAX_* in app code.
+ */
+export const MAX_GEMINI_SUGGESTIONS = 20;
+
 const MIN_SCORE_TO_LEARN = 0.35;
 const MIN_EVIDENCE_JOBS = 2;
 
 const refinementSchema = z.object({
-  addKeywords: z.array(z.string()).max(MAX_KEYWORDS_PER_CYCLE),
-  addNegativeKeywords: z.array(z.string()).max(3),
+  addKeywords: z.array(z.string()).max(MAX_GEMINI_SUGGESTIONS),
+  addNegativeKeywords: z.array(z.string()).max(MAX_GEMINI_SUGGESTIONS),
   triggerPhrases: z.array(z.string()),
 });
 
@@ -39,6 +50,22 @@ function extractFrequentTerms(jobs: Array<NormalizedJob & { score: number }>): s
     .map(([word]) => word);
 }
 
+function applyKeywordSuggestions(
+  current: SearchParams,
+  rawAddKeywords: string[],
+  rawAddNegativeKeywords: string[]
+): { addKeywords: string[]; addNegativeKeywords: string[] } {
+  const addKeywords = rawAddKeywords
+    .filter((k) => !current.keywords.includes(k))
+    .slice(0, MAX_KEYWORDS_PER_CYCLE);
+
+  const addNegativeKeywords = rawAddNegativeKeywords
+    .filter((k) => !current.negativeKeywords.includes(k))
+    .slice(0, MAX_NEGATIVE_KEYWORDS_PER_CYCLE);
+
+  return { addKeywords, addNegativeKeywords };
+}
+
 export async function refineSearchParams(
   current: SearchParams,
   highScoreJobs: Array<NormalizedJob & { score: number }>
@@ -61,23 +88,36 @@ export async function refineSearchParams(
       .map((j) => `- ${j.title} @ ${j.company}: ${j.description.slice(0, 400)}`)
       .join("\n");
 
-    const { object } = await generateObject({
-      model: geminiFlash,
-      schema: refinementSchema,
-      prompt: `You refine job search parameters. Current keywords: ${current.keywords.join(", ")}.
+    try {
+      const { object } = await generateObject({
+        model: geminiFlash,
+        schema: refinementSchema,
+        prompt: `You refine job search parameters. Current keywords: ${current.keywords.join(", ")}.
 High-match job descriptions:
 ${sample}
 
 Suggest up to ${MAX_KEYWORDS_PER_CYCLE} NEW keywords/phrases seen in these JDs (not already listed).
 Suggest negative keywords only for clearly irrelevant patterns.
 Never remove location or visa constraints.`,
-    });
+      });
 
-    addKeywords = object.addKeywords.filter((k) => !current.keywords.includes(k)).slice(0, MAX_KEYWORDS_PER_CYCLE);
-    addNegativeKeywords = object.addNegativeKeywords.filter(
-      (k) => !current.negativeKeywords.includes(k)
-    );
-    triggerPhrases = object.triggerPhrases;
+      const applied = applyKeywordSuggestions(
+        current,
+        object.addKeywords,
+        object.addNegativeKeywords
+      );
+      addKeywords = applied.addKeywords;
+      addNegativeKeywords = applied.addNegativeKeywords;
+      triggerPhrases = object.triggerPhrases;
+    } catch (error) {
+      console.warn(
+        "Gemini refinement failed; falling back to frequency heuristics.",
+        error
+      );
+      addKeywords = heuristicTerms.filter((t) => !current.keywords.includes(t));
+      addNegativeKeywords = [];
+      triggerPhrases = heuristicTerms;
+    }
   }
 
   const next = searchParamsSchema.parse({

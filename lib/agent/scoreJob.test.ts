@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { NormalizedJob, ParsedProfile } from "@/lib/types";
 
-import { hashJobUrl, scoreJobs } from "./scoreJob";
+import { hashJobUrl, jobDedupeKey, scoreJobs } from "./scoreJob";
 
 vi.mock("@/lib/ai/google", () => ({
   isGeminiConfigured: vi.fn(() => false),
@@ -37,6 +37,30 @@ describe("hashJobUrl", () => {
 
   it("returns different hashes for different urls", () => {
     expect(hashJobUrl("https://example.com/a")).not.toBe(hashJobUrl("https://example.com/b"));
+  });
+
+  it("ignores Adzuna tracking query params", () => {
+    const a =
+      "https://www.adzuna.com/land/ad/5736199475?se=aaa&utm_medium=api&v=111";
+    const b =
+      "https://www.adzuna.com/land/ad/5736199475?se=bbb&utm_medium=api&v=222";
+    expect(hashJobUrl(a)).toBe(hashJobUrl(b));
+  });
+});
+
+describe("jobDedupeKey", () => {
+  it("keys Adzuna listings by source and external id", () => {
+    const a = jobDedupeKey({
+      externalId: "5736199475",
+      url: "https://www.adzuna.com/land/ad/5736199475?se=aaa&v=1",
+      source: "adzuna",
+    });
+    const b = jobDedupeKey({
+      externalId: "5736199475",
+      url: "https://www.adzuna.com/land/ad/5736199475?se=bbb&v=2",
+      source: "adzuna",
+    });
+    expect(a).toBe(b);
   });
 });
 

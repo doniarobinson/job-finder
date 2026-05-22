@@ -181,16 +181,17 @@ describe("searchAdzuna", () => {
     expect(requestUrl().searchParams.get("results_per_page")).toBe("50");
   });
 
-  it("omits where when locations are empty", async () => {
+  it("omits where and distance when locations are empty", async () => {
     stubAdzunaCredentials();
     fetchMock.mockResolvedValue(mockFetchJson({ results: [] }));
 
     await searchAdzuna({ ...baseParams, locations: [] });
 
     expect(requestUrl().searchParams.has("where")).toBe(false);
+    expect(requestUrl().searchParams.has("distance")).toBe(false);
   });
 
-  it("builds query params from keywords, titles, and location", async () => {
+  it("builds query params with primary title in what and skills in what_or", async () => {
     stubAdzunaCredentials();
     vi.stubEnv("ADZUNA_COUNTRY", "us");
     fetchMock.mockResolvedValue(mockFetchJson({ results: [] }));
@@ -203,17 +204,59 @@ describe("searchAdzuna", () => {
     expect(parsed.pathname).toBe("/v1/api/jobs/us/search/1");
     expect(parsed.searchParams.get("app_id")).toBe("app-id");
     expect(parsed.searchParams.get("app_key")).toBe("app-key");
-    expect(parsed.searchParams.get("what")).toBe("Software Engineer typescript");
+    expect(parsed.searchParams.get("what")).toBe("Software Engineer");
+    expect(parsed.searchParams.get("what_or")).toBe("typescript");
     expect(parsed.searchParams.get("where")).toBe("New York");
+    expect(parsed.searchParams.get("distance")).toBe("40");
     expect(parsed.searchParams.get("results_per_page")).toBe("20");
   });
 
-  it("appends remote to the what parameter when remote is true", async () => {
+  it("puts extra title variants and keywords in what_or", async () => {
+    stubAdzunaCredentials();
+    fetchMock.mockResolvedValue(mockFetchJson({ results: [] }));
+
+    await searchAdzuna({
+      ...baseParams,
+      titleVariants: ["Software Engineer", "Engineer"],
+      keywords: ["typescript", "react"],
+    });
+
+    expect(requestUrl().searchParams.get("what")).toBe("Software Engineer");
+    expect(requestUrl().searchParams.get("what_or")).toBe("Engineer typescript react");
+  });
+
+  it("sets what_exclude from negative keywords", async () => {
+    stubAdzunaCredentials();
+    fetchMock.mockResolvedValue(mockFetchJson({ results: [] }));
+
+    await searchAdzuna({
+      ...baseParams,
+      negativeKeywords: ["java", "php"],
+    });
+
+    expect(requestUrl().searchParams.get("what_exclude")).toBe("java php");
+  });
+
+  it("appends remote to what when remote is true", async () => {
     stubAdzunaCredentials();
     fetchMock.mockResolvedValue(mockFetchJson({ results: [] }));
 
     await searchAdzuna({ ...baseParams, remote: true });
 
-    expect(requestUrl().searchParams.get("what")).toBe("Software Engineer typescript remote");
+    expect(requestUrl().searchParams.get("what")).toBe("Software Engineer remote");
+    expect(requestUrl().searchParams.get("what_or")).toBe("typescript");
+  });
+
+  it("omits what_or when there are no supplemental terms", async () => {
+    stubAdzunaCredentials();
+    fetchMock.mockResolvedValue(mockFetchJson({ results: [] }));
+
+    await searchAdzuna({
+      ...baseParams,
+      keywords: [],
+    });
+
+    expect(requestUrl().searchParams.get("what")).toBe("Software Engineer");
+    expect(requestUrl().searchParams.has("what_or")).toBe(false);
   });
 });
