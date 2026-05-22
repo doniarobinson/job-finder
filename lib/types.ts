@@ -46,4 +46,6 @@ export type UpdateResumeResult = {
   searchParams: SearchParams;
   created: boolean;
   searchParamsReset: boolean;
+  epochId?: number;
+  epochStarted?: boolean;
 };

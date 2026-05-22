@@ -1,5 +1,6 @@
 import { and, desc, eq, inArray } from "drizzle-orm";
 
+import { ensureCurrentEpoch } from "@/lib/agent/epochs";
 import { refineSearchParams } from "@/lib/agent/refineSearchParams";
 import { hashJobUrl, scoreJobs } from "@/lib/agent/scoreJob";
 import { db, schema } from "@/lib/db";
@@ -31,7 +32,11 @@ async function getCurrentSearchParams(profileId: number): Promise<SearchParams> 
   return searchParamsSchema.parse(row.paramsJson);
 }
 
-async function persistSearchParams(profileId: number, params: SearchParams): Promise<void> {
+async function persistSearchParams(
+  profileId: number,
+  params: SearchParams,
+  epochId: number
+): Promise<void> {
   if (!db) return;
 
   await db
@@ -46,6 +51,7 @@ async function persistSearchParams(profileId: number, params: SearchParams): Pro
 
   await db.insert(schema.searchParams).values({
     profileId,
+    epochId,
     paramsJson: params,
     isCurrent: true,
   });
@@ -76,6 +82,7 @@ export async function runSearchCycle(): Promise<AgentCycleResult> {
 
   const profile = parsedProfileSchema.parse(profileRow.parsedJson);
   const params = await getCurrentSearchParams(profileId);
+  const epoch = await ensureCurrentEpoch(profileId);
 
   const rawJobs = await searchAdzuna(params);
   const urlHashes = rawJobs.map((j) => hashJobUrl(j.url));
@@ -85,7 +92,12 @@ export async function runSearchCycle(): Promise<AgentCycleResult> {
       ? await db
           .select()
           .from(schema.jobs)
-          .where(inArray(schema.jobs.urlHash, urlHashes))
+          .where(
+            and(
+              eq(schema.jobs.epochId, epoch.id),
+              inArray(schema.jobs.urlHash, urlHashes)
+            )
+          )
       : [];
 
   const existingHashes = new Set(existing.map((j) => j.urlHash));
@@ -96,6 +108,7 @@ export async function runSearchCycle(): Promise<AgentCycleResult> {
   if (scored.length > 0) {
     await db.insert(schema.jobs).values(
       scored.map((job) => ({
+        epochId: epoch.id,
         urlHash: hashJobUrl(job.url),
         externalId: job.externalId,
         title: job.title,
@@ -115,8 +128,9 @@ export async function runSearchCycle(): Promise<AgentCycleResult> {
   const { next, triggerPhrases, changed } = await refineSearchParams(beforeParams, highScore);
 
   if (changed) {
-    await persistSearchParams(profileId, next);
+    await persistSearchParams(profileId, next, epoch.id);
     await db.insert(schema.paramHistory).values({
+      epochId: epoch.id,
       beforeJson: beforeParams,
       afterJson: next,
       triggerPhrases,

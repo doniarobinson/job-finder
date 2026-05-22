@@ -1,5 +1,10 @@
 import { and, desc, eq } from "drizzle-orm";
 
+import {
+  createAgentEpoch,
+  ensureCurrentEpoch,
+  type AgentEpochKind,
+} from "@/lib/agent/epochs";
 import { db, schema } from "@/lib/db";
 import {
   parsedProfileSchema,
@@ -101,7 +106,11 @@ async function ensureAgentSettings(): Promise<void> {
     .onConflictDoNothing();
 }
 
-async function setCurrentSearchParams(profileId: number, params: SearchParams): Promise<void> {
+async function setCurrentSearchParams(
+  profileId: number,
+  params: SearchParams,
+  epochId: number
+): Promise<void> {
   if (!db) return;
 
   await db
@@ -116,6 +125,7 @@ async function setCurrentSearchParams(profileId: number, params: SearchParams): 
 
   await db.insert(schema.searchParams).values({
     profileId,
+    epochId,
     paramsJson: params,
     isCurrent: true,
   });
@@ -127,7 +137,12 @@ async function setCurrentSearchParams(profileId: number, params: SearchParams): 
  */
 export async function updateProfileResume(
   resumeText: string,
-  options?: { resetSearchParams?: boolean }
+  options?: {
+    resetSearchParams?: boolean;
+    startNewEpoch?: boolean;
+    epochKind?: AgentEpochKind;
+    epochNote?: string;
+  }
 ): Promise<UpdateResumeResult> {
   if (!db) throw new Error("Database not configured (DATABASE_URL missing)");
 
@@ -144,8 +159,12 @@ export async function updateProfileResume(
       .values({ resumeText: trimmed, parsedJson: parsed })
       .returning();
 
+    const epochId = await createAgentEpoch(profile.id, "initial_bootstrap", {
+      note: "Initial profile bootstrap",
+      resumeText: trimmed,
+    });
     const searchParams = defaultSearchParams(parsed);
-    await setCurrentSearchParams(profile.id, searchParams);
+    await setCurrentSearchParams(profile.id, searchParams, epochId);
     await ensureAgentSettings();
 
     return {
@@ -154,6 +173,8 @@ export async function updateProfileResume(
       searchParams,
       created: true,
       searchParamsReset: true,
+      epochId,
+      epochStarted: true,
     };
   }
 
@@ -167,7 +188,21 @@ export async function updateProfileResume(
 
   if (resetSearchParams || !currentParamsRow) {
     const searchParams = defaultSearchParams(parsed);
-    await setCurrentSearchParams(existing.id, searchParams);
+    let epochId: number;
+    let epochStarted = false;
+
+    if (options?.startNewEpoch) {
+      epochId = await createAgentEpoch(existing.id, options.epochKind ?? "rebootstrap", {
+        note: options.epochNote,
+        resumeText: trimmed,
+      });
+      epochStarted = true;
+    } else {
+      const epoch = await ensureCurrentEpoch(existing.id);
+      epochId = epoch.id;
+    }
+
+    await setCurrentSearchParams(existing.id, searchParams, epochId);
     searchParamsReset = true;
     return {
       profileId: existing.id,
@@ -175,6 +210,8 @@ export async function updateProfileResume(
       searchParams,
       created: false,
       searchParamsReset,
+      epochId,
+      epochStarted,
     };
   }
 
@@ -194,7 +231,12 @@ export async function rebootstrapProfileFromEnv(): Promise<UpdateResumeResult> {
     throw new Error("RESUME_TEXT environment variable is required to re-bootstrap");
   }
 
-  return updateProfileResume(resumeText, { resetSearchParams: true });
+  return updateProfileResume(resumeText, {
+    resetSearchParams: true,
+    startNewEpoch: true,
+    epochKind: "rebootstrap",
+    epochNote: "Re-bootstrap from RESUME_TEXT",
+  });
 }
 
 /** Ensures a profile and current search params exist; does not overwrite an existing resume. */
@@ -218,7 +260,8 @@ export async function ensureBootstrapProfile(): Promise<{
 
     const parsed = parsedProfileSchema.parse(existing.parsedJson);
     const searchParams = defaultSearchParams(parsed);
-    await setCurrentSearchParams(existing.id, searchParams);
+    const epoch = await ensureCurrentEpoch(existing.id);
+    await setCurrentSearchParams(existing.id, searchParams, epoch.id);
     await ensureAgentSettings();
 
     return { profileId: existing.id, searchParams };

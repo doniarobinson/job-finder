@@ -25,7 +25,10 @@ function formatCycleResult(result: AgentCycleResult): string {
 function formatRebootstrapResult(result: UpdateResumeResult): string {
   const keywords = result.searchParams.keywords.slice(0, 5).join(", ");
   const suffix = result.searchParams.keywords.length > 5 ? ", …" : "";
-  return `Re-bootstrapped from RESUME_TEXT — ${result.searchParams.keywords.length} keyword${result.searchParams.keywords.length === 1 ? "" : "s"} (${keywords}${suffix}).`;
+  const epochNote = result.epochStarted
+    ? " New agent era started; prior jobs and history are archived."
+    : "";
+  return `Re-bootstrapped from RESUME_TEXT — ${result.searchParams.keywords.length} keyword${result.searchParams.keywords.length === 1 ? "" : "s"} (${keywords}${suffix}).${epochNote}`;
 }
 
 export function AgentControls() {
@@ -52,7 +55,7 @@ export function AgentControls() {
   async function rebootstrap() {
     if (
       !window.confirm(
-        "Are you sure you want to re-bootstrap from the RESUME_TEXT environment variable? This overwrites the stored resume and resets search params.",
+        "Are you sure you want to re-bootstrap from the RESUME_TEXT environment variable? This starts a new agent era. Your resume and search params reset, but prior jobs and param history will stay in the database.",
       )
     ) {
       return;
@@ -65,7 +68,9 @@ export function AgentControls() {
       publishSystemMessage(formatRebootstrapResult(result));
       router.refresh();
     } catch (err) {
-      publishSystemMessage(err instanceof Error ? err.message : "Re-bootstrap failed");
+      publishSystemMessage(
+        err instanceof Error ? err.message : "Re-bootstrap failed",
+      );
     } finally {
       setRebootstrapLoading(false);
     }

@@ -4,7 +4,10 @@ import {
   DatabaseNotConfiguredBanner,
   DatabaseUnavailableBanner,
 } from "@/app/components/DatabaseStatusBanners";
-import { getDashboardData } from "@/lib/dashboard";
+import { ParameterHistorySection } from "@/app/components/ParameterHistorySection";
+import { SearchParamsTable } from "@/app/components/SearchParamsDisplay";
+import { getDashboardData, getParameterHistoryPage } from "@/lib/dashboard";
+import { searchParamsSchema } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -25,8 +28,10 @@ function HeaderDescription() {
 
 function DashboardMain({
   data,
+  parameterHistory,
 }: {
   data: Awaited<ReturnType<typeof getDashboardData>>;
+  parameterHistory: Awaited<ReturnType<typeof getParameterHistoryPage>>;
 }) {
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 space-y-10 px-6 py-10">
@@ -37,9 +42,11 @@ function DashboardMain({
       <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
         <h2 className="text-lg font-medium">Current search parameters</h2>
         {data.currentParams ? (
-          <pre className="mt-4 overflow-x-auto rounded-lg bg-zinc-100 p-4 text-xs">
-            {JSON.stringify(data.currentParams, null, 2)}
-          </pre>
+          <SearchParamsTable
+            params={searchParamsSchema.parse(data.currentParams)}
+            detailed
+            className="mt-4"
+          />
         ) : (
           <p className="mt-2 text-sm text-zinc-500">
             No parameters yet. Set RESUME_TEXT and run an agent cycle.
@@ -48,9 +55,20 @@ function DashboardMain({
       </section>
 
       <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-medium">Job matches</h2>
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+          <h2 className="text-lg font-medium">Job matches</h2>
+          {data.currentEpochLabel && (
+            <p className="text-sm text-zinc-500">Current era · {data.currentEpochLabel}</p>
+          )}
+        </div>
+        {data.archivedJobCount > 0 && (
+          <p className="mt-2 text-sm text-zinc-500">
+            {data.archivedJobCount} job{data.archivedJobCount === 1 ? "" : "s"} from prior eras
+            preserved in the database.
+          </p>
+        )}
         {data.jobs.length === 0 ? (
-          <p className="mt-2 text-sm text-zinc-500">No jobs stored yet.</p>
+          <p className="mt-2 text-sm text-zinc-500">No jobs stored yet for the current era.</p>
         ) : (
           <ul className="mt-4 divide-y divide-zinc-100">
             {data.jobs.map((job) => (
@@ -80,29 +98,27 @@ function DashboardMain({
         )}
       </section>
 
-      <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-medium">Parameter history</h2>
-        {data.paramHistory.length === 0 ? (
-          <p className="mt-2 text-sm text-zinc-500">No refinements recorded yet.</p>
-        ) : (
-          <ul className="mt-4 space-y-3">
-            {data.paramHistory.map((entry) => (
-              <li key={entry.id} className="rounded-lg border border-zinc-100 p-3 text-sm">
-                <span className="text-zinc-500">{entry.createdAt.toLocaleString()}</span>
-                <pre className="mt-2 overflow-x-auto text-xs text-zinc-700">
-                  {JSON.stringify(entry.triggerPhrases, null, 2)}
-                </pre>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <ParameterHistorySection history={parameterHistory} />
     </main>
   );
 }
 
-export default async function Home() {
-  const data = await getDashboardData();
+function parseHistoryPage(value: string | undefined): number {
+  const page = Number.parseInt(value ?? "1", 10);
+  return Number.isFinite(page) && page > 0 ? page : 1;
+}
+
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ historyPage?: string }>;
+}) {
+  const { historyPage: historyPageParam } = await searchParams;
+  const historyPage = parseHistoryPage(historyPageParam);
+  const [data, parameterHistory] = await Promise.all([
+    getDashboardData(),
+    getParameterHistoryPage(historyPage),
+  ]);
 
   if (data.configured) {
     return (
@@ -117,7 +133,7 @@ export default async function Home() {
             </footer>
           }
         >
-          <DashboardMain data={data} />
+          <DashboardMain data={data} parameterHistory={parameterHistory} />
         </ConfiguredAgentShell>
       </div>
     );
@@ -130,7 +146,7 @@ export default async function Home() {
           <HeaderDescription />
         </div>
       </header>
-      <DashboardMain data={data} />
+      <DashboardMain data={data} parameterHistory={parameterHistory} />
     </div>
   );
 }

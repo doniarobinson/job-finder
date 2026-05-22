@@ -119,6 +119,17 @@ const hoisted = vi.hoisted(() => {
   };
 });
 
+vi.mock("@/lib/agent/epochs", () => ({
+  ensureCurrentEpoch: vi.fn(() =>
+    Promise.resolve({
+      id: 1,
+      kind: "initial_bootstrap",
+      startedAt: new Date("2026-01-01"),
+      note: null,
+    })
+  ),
+}));
+
 vi.mock("@/lib/sources/adzuna", () => ({
   searchAdzuna: hoisted.searchAdzunaMock,
 }));
@@ -168,8 +179,8 @@ describe("runSearchCycle", () => {
       searchParams: hoisted.initialParams,
     });
     hoisted.searchAdzunaMock.mockResolvedValue(adzunaJobs);
-    hoisted.scoreJobsMock.mockImplementation(async (_resume, _profile, jobs) =>
-      jobs.map((job) => ({ ...job, score: 0.5 }))
+    hoisted.scoreJobsMock.mockImplementation(async (_resume, _profile, jobs: NormalizedJob[]) =>
+      jobs.map((job: NormalizedJob) => ({ ...job, score: 0.5 }))
     );
   });
 

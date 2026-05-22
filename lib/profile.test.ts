@@ -92,6 +92,7 @@ const profileDbHoisted = vi.hoisted(() => {
     } | null,
     currentParams: null as SearchParams | null,
     agentSettingsInserted: false,
+    nextEpochId: 1,
   };
 
   const insertMock = vi.fn((table: unknown) => ({
@@ -106,6 +107,13 @@ const profileDbHoisted = vi.hoisted(() => {
       if (table === schema.searchParams && payload && typeof payload === "object") {
         state.currentParams = (payload as { paramsJson: SearchParams }).paramsJson;
         return Promise.resolve();
+      }
+      if (table === schema.agentEpochs && payload && typeof payload === "object") {
+        const id = state.nextEpochId;
+        state.nextEpochId += 1;
+        return {
+          returning: vi.fn(() => Promise.resolve([{ id }])),
+        };
       }
       if (table === schema.agentSettings) {
         state.agentSettingsInserted = true;
@@ -127,6 +135,18 @@ const profileDbHoisted = vi.hoisted(() => {
           return Promise.resolve(
             state.currentParams ? [{ id: 1, paramsJson: state.currentParams, isCurrent: true }] : []
           );
+        }
+        if (table === schema.agentEpochs) {
+          return Promise.resolve([
+            {
+              id: 1,
+              profileId: 1,
+              kind: "initial_bootstrap",
+              note: null,
+              resumeHash: null,
+              startedAt: new Date("2026-01-01"),
+            },
+          ]);
         }
         return Promise.resolve([]);
       }),
@@ -161,6 +181,7 @@ describe("updateProfileResume", () => {
     profileDbHoisted.state.profile = null;
     profileDbHoisted.state.currentParams = null;
     profileDbHoisted.state.agentSettingsInserted = false;
+    profileDbHoisted.state.nextEpochId = 1;
     profileDbHoisted.db.insert.mockClear();
     profileDbHoisted.db.update.mockClear();
   });
@@ -234,6 +255,7 @@ describe("ensureBootstrapProfile", () => {
   beforeEach(() => {
     profileDbHoisted.state.profile = null;
     profileDbHoisted.state.currentParams = null;
+    profileDbHoisted.state.nextEpochId = 1;
     profileDbHoisted.db.insert.mockClear();
     profileDbHoisted.db.update.mockClear();
     vi.unstubAllEnvs();
@@ -291,6 +313,7 @@ describe("rebootstrapProfileFromEnv", () => {
       negativeKeywords: [],
       maxResultsPerCycle: 20,
     };
+    profileDbHoisted.state.nextEpochId = 2;
     profileDbHoisted.db.insert.mockClear();
     profileDbHoisted.db.update.mockClear();
     vi.unstubAllEnvs();
@@ -315,5 +338,7 @@ describe("rebootstrapProfileFromEnv", () => {
     expect(result.searchParams.keywords).toContain("Rust");
     expect(result.searchParams.keywords).not.toContain("legacy");
     expect(result.parsed.skills).toContain("Rust");
+    expect(result.epochStarted).toBe(true);
+    expect(result.epochId).toBe(2);
   });
 });
