@@ -8,6 +8,7 @@ import {
   type SearchParams,
   type UpdateResumeResult,
 } from "@/lib/types";
+import { inferResumeLocations } from "@/lib/resumeLocations";
 
 function extractList(text: string, pattern: RegExp): string[] {
   const match = text.match(pattern);
@@ -23,7 +24,8 @@ export function parseResume(resumeText: string): ParsedProfile {
   const lower = resumeText.toLowerCase();
   const skills = extractList(resumeText, /skills?:\s*([^\n]+)/i);
   const titles = extractList(resumeText, /(?:titles?|roles?):\s*([^\n]+)/i);
-  const locations = extractList(resumeText, /locations?:\s*([^\n]+)/i);
+  const explicitLocations = extractList(resumeText, /locations?:\s*([^\n]+)/i);
+  const locations = inferResumeLocations(resumeText, explicitLocations);
 
   const yearsMatch = resumeText.match(/(\d+)\+?\s*years?/i);
   const yearsExperience = yearsMatch ? Number(yearsMatch[1]) : undefined;
@@ -185,6 +187,16 @@ export async function updateProfileResume(
   };
 }
 
+/** Re-read RESUME_TEXT from the environment and reset search params (testing / dev). */
+export async function rebootstrapProfileFromEnv(): Promise<UpdateResumeResult> {
+  const resumeText = process.env.RESUME_TEXT?.trim();
+  if (!resumeText) {
+    throw new Error("RESUME_TEXT environment variable is required to re-bootstrap");
+  }
+
+  return updateProfileResume(resumeText, { resetSearchParams: true });
+}
+
 /** Ensures a profile and current search params exist; does not overwrite an existing resume. */
 export async function ensureBootstrapProfile(): Promise<{
   profileId: number;
@@ -214,7 +226,7 @@ export async function ensureBootstrapProfile(): Promise<{
 
   const resumeText = process.env.RESUME_TEXT?.trim();
   if (!resumeText) {
-    throw new Error("RESUME_TEXT env var is required for first-time bootstrap");
+    throw new Error("RESUME_TEXT environment variable is required for first-time bootstrap");
   }
 
   const result = await updateProfileResume(resumeText);
