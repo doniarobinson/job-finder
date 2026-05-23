@@ -16,13 +16,13 @@ export function JobMatchesSection({
   const { jobs, page, pageSize, totalCount, totalPages } = jobMatches;
 
   return (
-    <section className="rounded-xl border border-zinc-200 bg-white px-6 py-4 shadow-sm">
+    <section className="rounded-xl border border-border bg-surface px-6 py-4 shadow-sm">
       <h2 className="text-lg font-medium">Job matches</h2>
       {jobs.length === 0 ? (
-        <p className="mt-2 text-sm text-zinc-500">No jobs stored yet for the current era.</p>
+        <p className="mt-2 text-sm text-muted">No jobs stored yet for the current era.</p>
       ) : (
         <>
-          <ul className="mt-3 divide-y divide-zinc-100">
+          <ul className="mt-3 divide-y divide-border-subtle">
             {jobs.map((job) => (
               <li
                 key={job.id}
@@ -33,15 +33,15 @@ export function JobMatchesSection({
                     href={job.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="font-medium text-blue-700 hover:underline"
+                    className="font-medium text-link hover:underline"
                   >
                     {job.title}
                   </a>
-                  <p className="text-sm text-zinc-600">
+                  <p className="text-sm text-muted">
                     {job.company} · {job.status}
                   </p>
                 </div>
-                <span className="text-sm font-mono text-zinc-500">
+                <span className="text-sm font-mono text-muted">
                   score {(job.score ?? 0).toFixed(3)}
                 </span>
               </li>
@@ -51,7 +51,7 @@ export function JobMatchesSection({
           {totalCount > 0 && (
             <ListPaginationFooter
               ariaLabel="Job matches pagination"
-              className="mt-4 space-y-2 border-t border-zinc-100 pt-3"
+              className="mt-4 space-y-2 border-t border-border-subtle pt-3"
               page={page}
               totalPages={totalPages}
               previousHref={

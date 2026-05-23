@@ -21,12 +21,12 @@ export function ParameterHistoryPageSizeSelect({
   const router = useRouter();
 
   return (
-    <label className="flex items-center gap-2 text-xs text-zinc-500">
+    <label className="flex items-center gap-2 text-xs text-muted">
       Versions per page
       <select
         value={pageSize}
         aria-label="Parameter history page size"
-        className="rounded-md border border-zinc-300 bg-white px-2 py-1 text-sm text-zinc-800"
+        className="rounded-md border border-border bg-surface px-2 py-1 text-sm text-foreground"
         onChange={(event) => {
           const nextSize = Number(event.target.value) as ParameterHistoryPageSize;
           router.push(
