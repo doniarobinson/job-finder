@@ -150,7 +150,12 @@ const dashboardHoisted = vi.hoisted(() => {
           }
           if (table === schema.jobs) {
             if (chain.whereCalled) {
-              return Promise.resolve(data.jobs.filter((job) => job.epochId === 1));
+              const filtered = data.jobs.filter((job) => job.epochId === 1);
+              return {
+                offset: vi.fn((offsetN: number) =>
+                  Promise.resolve(filtered.slice(offsetN, offsetN + limitN))
+                ),
+              };
             }
             return Promise.resolve(data.jobs);
           }
@@ -195,7 +200,11 @@ const dashboardHoisted = vi.hoisted(() => {
               }
               if (table === schema.jobs) {
                 return {
-                  where: vi.fn(() => Promise.resolve([{ value: 0 }])),
+                  where: vi.fn(() =>
+                    Promise.resolve([
+                      { value: data.jobs.filter((job) => job.epochId === 1).length },
+                    ])
+                  ),
                 };
               }
               return Promise.resolve([{ value: 0 }]);
@@ -247,7 +256,6 @@ describe("getDashboardData", () => {
 
     expect(data.configured).toBe(false);
     expect(data.dbError).toBeUndefined();
-    expect(data.jobs).toEqual([]);
   });
 
   it("returns dbError when queries fail", async () => {
@@ -258,7 +266,6 @@ describe("getDashboardData", () => {
 
     expect(data.configured).toBe(false);
     expect(data.dbError).toContain(".env.local");
-    expect(data.jobs).toEqual([]);
   });
 
   it("returns dashboard data when the database is available", async () => {
@@ -268,11 +275,36 @@ describe("getDashboardData", () => {
 
     expect(data.configured).toBe(true);
     expect(data.dbError).toBeUndefined();
-    expect(data.jobs).toHaveLength(1);
-    expect(data.jobs[0]?.title).toBe("Engineer");
     expect(data.currentParams).toMatchObject({ keywords: ["typescript", "kubernetes"] });
     expect(data.currentEpochLabel).toBe("Initial bootstrap");
-    expect(data.archivedJobCount).toBe(0);
+  });
+});
+
+describe("getJobMatchesPage", () => {
+  beforeEach(() => {
+    dashboardHoisted.setDb(dashboardHoisted.createMockDb({ mode: "success" }));
+  });
+
+  it("returns paginated job matches for the current epoch", async () => {
+    const { getJobMatchesPage, DEFAULT_JOB_MATCHES_PAGE_SIZE } = await import("./dashboard");
+
+    const matches = await getJobMatchesPage(1);
+
+    expect(matches.pageSize).toBe(DEFAULT_JOB_MATCHES_PAGE_SIZE);
+    expect(matches.jobs).toHaveLength(1);
+    expect(matches.jobs[0]?.title).toBe("Engineer");
+    expect(matches.totalCount).toBe(1);
+    expect(matches.totalPages).toBe(1);
+  });
+
+  it("returns an empty page when db is null", async () => {
+    dashboardHoisted.setDb(null);
+    const { getJobMatchesPage } = await import("./dashboard");
+
+    const matches = await getJobMatchesPage(1);
+
+    expect(matches.jobs).toEqual([]);
+    expect(matches.totalCount).toBe(0);
   });
 });
 
@@ -282,12 +314,12 @@ describe("getParameterHistoryPage", () => {
   });
 
   it("returns paginated search parameter versions newest first", async () => {
-    const { getParameterHistoryPage, PARAMETER_HISTORY_PAGE_SIZE } = await import("./dashboard");
+    const { getParameterHistoryPage, DEFAULT_PARAMETER_HISTORY_PAGE_SIZE } = await import("./dashboard");
 
     const history = await getParameterHistoryPage(1);
 
     expect(history.page).toBe(1);
-    expect(history.pageSize).toBe(PARAMETER_HISTORY_PAGE_SIZE);
+    expect(history.pageSize).toBe(DEFAULT_PARAMETER_HISTORY_PAGE_SIZE);
     expect(history.totalCount).toBe(2);
     expect(history.currentEpochCount).toBe(2);
     expect(history.totalPages).toBe(1);
