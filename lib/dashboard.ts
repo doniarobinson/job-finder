@@ -1,4 +1,4 @@
-import { and, count, desc, eq, isNotNull, ne } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNotNull, min, ne } from "drizzle-orm";
 
 import {
   ensureCurrentEpoch,
@@ -8,6 +8,7 @@ import {
 } from "@/lib/agent/epochs";
 import { db, schema } from "@/lib/db";
 import { formatFriendlyDbError } from "@/lib/db/friendlyError";
+import { cycleAddedKeywordsByAfterParams, searchParamsFingerprint } from "@/lib/paramsDiff";
 import { searchParamsSchema, type SearchParams } from "@/lib/types";
 
 export const PARAMETER_HISTORY_PAGE_SIZE = 10;
@@ -22,6 +23,8 @@ export type ParameterHistoryEntry = {
   epochLabel: string | null;
   epochStartedAt: Date | null;
   showEpochDividerAfter: boolean;
+  /** Keywords added after an Adzuna search cycle (from param_history). */
+  cycleAddedKeywords: string[];
 };
 
 export type ParameterHistoryPage = {
@@ -29,6 +32,7 @@ export type ParameterHistoryPage = {
   page: number;
   pageSize: number;
   totalCount: number;
+  currentEpochCount: number;
   totalPages: number;
 };
 
@@ -65,6 +69,7 @@ const emptyParameterHistoryPage = (page: number): ParameterHistoryPage => ({
   page,
   pageSize: PARAMETER_HISTORY_PAGE_SIZE,
   totalCount: 0,
+  currentEpochCount: 0,
   totalPages: 1,
 });
 
@@ -101,8 +106,32 @@ export async function getParameterHistoryPage(page = 1): Promise<ParameterHistor
       .from(schema.searchParams)
       .where(eq(schema.searchParams.profileId, profileId));
 
+    const currentEpoch = await ensureCurrentEpoch(profileId);
+    const [{ value: currentEpochCount }] = await db
+      .select({ value: count() })
+      .from(schema.searchParams)
+      .where(
+        and(
+          eq(schema.searchParams.profileId, profileId),
+          eq(schema.searchParams.epochId, currentEpoch.id)
+        )
+      );
+
     const totalPages = Math.max(1, Math.ceil(totalCount / PARAMETER_HISTORY_PAGE_SIZE));
     const clampedPage = Math.min(safePage, totalPages);
+
+    const epochStartRows = await db
+      .select({
+        epochId: schema.searchParams.epochId,
+        firstParamId: min(schema.searchParams.id),
+      })
+      .from(schema.searchParams)
+      .where(and(eq(schema.searchParams.profileId, profileId), isNotNull(schema.searchParams.epochId)))
+      .groupBy(schema.searchParams.epochId);
+
+    const epochStartParamIdByEpoch = new Map(
+      epochStartRows.map((row) => [row.epochId!, row.firstParamId!])
+    );
 
     const rows = await db
       .select()
@@ -112,19 +141,36 @@ export async function getParameterHistoryPage(page = 1): Promise<ParameterHistor
       .limit(PARAMETER_HISTORY_PAGE_SIZE)
       .offset((clampedPage - 1) * PARAMETER_HISTORY_PAGE_SIZE);
 
+    const epochIds = [...new Set(rows.map((row) => row.epochId).filter((id): id is number => id != null))];
+    const paramHistoryRows =
+      epochIds.length > 0
+        ? await db
+            .select({
+              beforeJson: schema.paramHistory.beforeJson,
+              afterJson: schema.paramHistory.afterJson,
+            })
+            .from(schema.paramHistory)
+            .where(inArray(schema.paramHistory.epochId, epochIds))
+        : [];
+    const cycleAddedByAfter = cycleAddedKeywordsByAfterParams(paramHistoryRows);
+
     const mapped = rows.map((row) => {
+      const params = searchParamsSchema.parse(row.paramsJson);
       const epoch = row.epochId ? epochById.get(row.epochId) : undefined;
       const kind = (epoch?.kind as AgentEpochKind | undefined) ?? null;
+      const isEpochStartEntry =
+        row.epochId != null && row.id === epochStartParamIdByEpoch.get(row.epochId);
       return {
         id: row.id,
-        params: searchParamsSchema.parse(row.paramsJson),
+        params,
         isCurrent: row.isCurrent,
         createdAt: row.createdAt,
         epochId: row.epochId,
         epochKind: kind,
-        epochLabel: kind ? epochKindLabel(kind) : null,
+        epochLabel: kind && isEpochStartEntry ? epochKindLabel(kind) : null,
         epochStartedAt: epoch?.startedAt ?? null,
         showEpochDividerAfter: false,
+        cycleAddedKeywords: cycleAddedByAfter.get(searchParamsFingerprint(params)) ?? [],
       };
     });
 
@@ -140,6 +186,7 @@ export async function getParameterHistoryPage(page = 1): Promise<ParameterHistor
       page: clampedPage,
       pageSize: PARAMETER_HISTORY_PAGE_SIZE,
       totalCount,
+      currentEpochCount,
       totalPages,
     };
   } catch (error) {

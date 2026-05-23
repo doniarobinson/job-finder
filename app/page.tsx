@@ -55,18 +55,7 @@ function DashboardMain({
       </section>
 
       <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-          <h2 className="text-lg font-medium">Job matches</h2>
-          {data.currentEpochLabel && (
-            <p className="text-sm text-zinc-500">Current era · {data.currentEpochLabel}</p>
-          )}
-        </div>
-        {data.archivedJobCount > 0 && (
-          <p className="mt-2 text-sm text-zinc-500">
-            {data.archivedJobCount} job{data.archivedJobCount === 1 ? "" : "s"} from prior eras
-            preserved in the database.
-          </p>
-        )}
+        <h2 className="text-lg font-medium">Job matches</h2>
         {data.jobs.length === 0 ? (
           <p className="mt-2 text-sm text-zinc-500">No jobs stored yet for the current era.</p>
         ) : (

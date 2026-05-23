@@ -80,6 +80,29 @@ const dashboardHoisted = vi.hoisted(() => {
           createdAt: new Date("2026-01-01"),
         },
       ],
+      paramHistory: [
+        {
+          id: 1,
+          epochId: 1,
+          beforeJson: {
+            keywords: ["typescript"],
+            titleVariants: ["Engineer"],
+            locations: [],
+            remote: false,
+            negativeKeywords: [],
+            maxResultsPerCycle: 20,
+          },
+          afterJson: {
+            keywords: ["typescript", "kubernetes"],
+            titleVariants: ["Engineer"],
+            locations: ["NYC"],
+            remote: false,
+            negativeKeywords: [],
+            maxResultsPerCycle: 20,
+          },
+          triggerPhrases: ["kubernetes"],
+        },
+      ],
     };
 
     const selectChain = (table: unknown) => {
@@ -87,9 +110,34 @@ const dashboardHoisted = vi.hoisted(() => {
         whereCalled: false,
         where: vi.fn(() => {
           chain.whereCalled = true;
+          if (table === schema.paramHistory) {
+            return Promise.resolve(data.paramHistory);
+          }
           return chain;
         }),
         orderBy: vi.fn(() => chain),
+        groupBy: vi.fn(() => {
+          if (options.mode === "error") {
+            return Promise.reject(new Error("fetch failed"));
+          }
+          if (table === schema.searchParams) {
+            const byEpoch = new Map<number, number>();
+            for (const row of data.searchParams) {
+              if (row.epochId == null) continue;
+              const existing = byEpoch.get(row.epochId);
+              if (existing == null || row.id < existing) {
+                byEpoch.set(row.epochId, row.id);
+              }
+            }
+            return Promise.resolve(
+              [...byEpoch.entries()].map(([epochId, firstParamId]) => ({
+                epochId,
+                firstParamId,
+              }))
+            );
+          }
+          return Promise.resolve([]);
+        }),
         limit: vi.fn((limitN: number) => {
           if (options.mode === "error") {
             return Promise.reject(new Error("fetch failed"));
@@ -122,6 +170,9 @@ const dashboardHoisted = vi.hoisted(() => {
                 Promise.resolve(data.searchParams.slice(offsetN, offsetN + limitN))
               ),
             };
+          }
+          if (table === schema.paramHistory) {
+            return Promise.resolve(data.paramHistory);
           }
           return Promise.resolve([]);
         }),
@@ -238,11 +289,15 @@ describe("getParameterHistoryPage", () => {
     expect(history.page).toBe(1);
     expect(history.pageSize).toBe(PARAMETER_HISTORY_PAGE_SIZE);
     expect(history.totalCount).toBe(2);
+    expect(history.currentEpochCount).toBe(2);
     expect(history.totalPages).toBe(1);
     expect(history.entries).toHaveLength(2);
     expect(history.entries[0]?.isCurrent).toBe(true);
     expect(history.entries[0]?.params.keywords).toContain("kubernetes");
-    expect(history.entries[0]?.epochLabel).toBe("Initial bootstrap");
+    expect(history.entries[0]?.cycleAddedKeywords).toEqual(["kubernetes"]);
+    expect(history.entries[0]?.epochLabel).toBeNull();
+    expect(history.entries[1]?.cycleAddedKeywords).toEqual([]);
+    expect(history.entries[1]?.epochLabel).toBe("Initial bootstrap");
   });
 
   it("returns an empty page when db is null", async () => {

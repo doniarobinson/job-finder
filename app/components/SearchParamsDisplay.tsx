@@ -7,20 +7,30 @@ const NEGATIVE_KEYWORDS_DESCRIPTION = "Terms to deprioritize or exclude over tim
 function CellTags({
   items,
   emptyLabel = "—",
+  highlightItems,
 }: {
   items: string[];
   emptyLabel?: string;
+  highlightItems?: ReadonlySet<string>;
 }) {
   if (items.length === 0) {
     return <span className="text-zinc-500">{emptyLabel}</span>;
   }
+
+  const highlightLower = highlightItems
+    ? new Set([...highlightItems].map((item) => item.toLowerCase()))
+    : undefined;
 
   return (
     <ul className="flex flex-wrap gap-1">
       {items.map((item) => (
         <li
           key={item}
-          className="inline-flex rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-800"
+          className={
+            highlightLower?.has(item.toLowerCase())
+              ? "inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-900"
+              : "inline-flex rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-800"
+          }
         >
           {item}
         </li>
@@ -43,9 +53,22 @@ type SearchParamRow = {
   value: ReactNode;
 };
 
-function buildSearchParamRows(params: SearchParams, detailed: boolean): SearchParamRow[] {
+function buildSearchParamRows(
+  params: SearchParams,
+  detailed: boolean,
+  highlightKeywords?: ReadonlySet<string>
+): SearchParamRow[] {
   return [
-    { label: "Keywords", value: <CellTags items={params.keywords} emptyLabel="None" /> },
+    {
+      label: "Keywords",
+      value: (
+        <CellTags
+          items={params.keywords}
+          emptyLabel="None"
+          highlightItems={highlightKeywords}
+        />
+      ),
+    },
     {
       label: "Title variants",
       value: <CellTags items={params.titleVariants} emptyLabel="None" />,
@@ -81,13 +104,16 @@ export function SearchParamsTable({
   params,
   detailed = false,
   className,
+  highlightKeywords,
 }: {
   params: SearchParams;
   /** Current-params view: results per cycle + negative keywords subtitle */
   detailed?: boolean;
   className?: string;
+  /** Keywords added after an Adzuna search cycle (parameter history). */
+  highlightKeywords?: ReadonlySet<string>;
 }) {
-  const rows = buildSearchParamRows(params, detailed);
+  const rows = buildSearchParamRows(params, detailed, highlightKeywords);
 
   return (
     <div className={className}>
