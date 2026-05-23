@@ -1,12 +1,12 @@
-import Link from "next/link";
-
+import { ListPaginationFooter } from "@/app/components/ListPaginationFooter";
+import { ParameterHistoryPageSizeSelect } from "@/app/components/ParameterHistoryPageSizeSelect";
 import { SearchParamsTable } from "@/app/components/SearchParamsDisplay";
 import { epochKindLabel } from "@/lib/agent/epochs";
 import type { ParameterHistoryPage } from "@/lib/dashboard";
-
-function historyPageHref(page: number): string {
-  return page <= 1 ? "/" : `/?historyPage=${page}`;
-}
+import {
+  dashboardSearchHref,
+  type DashboardSearchParams,
+} from "@/lib/dashboardSearchParams";
 
 function EpochDivider({
   label,
@@ -59,15 +59,24 @@ function EntryHeader({ entry }: { entry: ParameterHistoryPage["entries"][number]
   );
 }
 
-export function ParameterHistorySection({ history }: { history: ParameterHistoryPage }) {
-  const { entries, page, currentEpochCount, totalPages } = history;
+export function ParameterHistorySection({
+  history,
+  searchParams,
+}: {
+  history: ParameterHistoryPage;
+  searchParams: DashboardSearchParams;
+}) {
+  const { entries, page, pageSize, currentEpochCount, totalPages, totalCount } = history;
 
   return (
     <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-        <h2 className="text-lg font-medium">Parameter history</h2>
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-lg font-medium">Parameter history</h2>
+          <p className="mt-0.5 text-xs text-zinc-500">(Newest to oldest)</p>
+        </div>
         {currentEpochCount > 0 && (
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-zinc-500 sm:pt-0.5">
             {currentEpochCount} saved version{currentEpochCount === 1 ? "" : "s"} for current
             epoch/era
           </p>
@@ -108,37 +117,28 @@ export function ParameterHistorySection({ history }: { history: ParameterHistory
             ))}
           </ul>
 
-          {totalPages > 1 && (
-            <nav
-              aria-label="Parameter history pagination"
-              className="mt-6 flex items-center justify-between border-t border-zinc-100 pt-4"
-            >
-              {page > 1 ? (
-                <Link
-                  href={historyPageHref(page - 1)}
-                  className="text-sm font-medium text-blue-700 hover:underline"
-                >
-                  ← Previous
-                </Link>
-              ) : (
-                <span className="text-sm text-zinc-400">← Previous</span>
-              )}
-
-              <span className="text-sm text-zinc-600">
-                Page {page} of {totalPages}
-              </span>
-
-              {page < totalPages ? (
-                <Link
-                  href={historyPageHref(page + 1)}
-                  className="text-sm font-medium text-blue-700 hover:underline"
-                >
-                  Next →
-                </Link>
-              ) : (
-                <span className="text-sm text-zinc-400">Next →</span>
-              )}
-            </nav>
+          {totalCount > 0 && (
+            <ListPaginationFooter
+              ariaLabel="Parameter history pagination"
+              page={page}
+              totalPages={totalPages}
+              previousHref={
+                page > 1
+                  ? dashboardSearchHref(searchParams, { historyPage: page - 1 })
+                  : undefined
+              }
+              nextHref={
+                page < totalPages
+                  ? dashboardSearchHref(searchParams, { historyPage: page + 1 })
+                  : undefined
+              }
+              pageSizeSelect={
+                <ParameterHistoryPageSizeSelect
+                  searchParams={searchParams}
+                  pageSize={pageSize}
+                />
+              }
+            />
           )}
         </>
       )}

@@ -9,9 +9,38 @@ import {
 import { db, schema } from "@/lib/db";
 import { formatFriendlyDbError } from "@/lib/db/friendlyError";
 import { cycleAddedKeywordsByAfterParams, searchParamsFingerprint } from "@/lib/paramsDiff";
+import {
+  DEFAULT_PARAMETER_HISTORY_PAGE_SIZE,
+  parseParameterHistoryPageSize,
+  type ParameterHistoryPageSize,
+} from "@/lib/parameterHistoryPagination";
+import {
+  DEFAULT_JOB_MATCHES_PAGE_SIZE,
+  jobMatchesLimit,
+  jobMatchesTotalPages,
+  parseJobMatchesPageSize,
+  type JobMatchesPageSize,
+} from "@/lib/jobMatchesPagination";
 import { searchParamsSchema, type SearchParams } from "@/lib/types";
 
-export const PARAMETER_HISTORY_PAGE_SIZE = 10;
+export {
+  DEFAULT_JOB_MATCHES_PAGE_SIZE,
+  JOB_MATCHES_PAGE_SIZE_OPTIONS,
+  parseJobMatchesPage,
+  parseJobMatchesPageSize,
+  type JobMatchesPageSize,
+} from "@/lib/jobMatchesPagination";
+
+/** @deprecated Use DEFAULT_PARAMETER_HISTORY_PAGE_SIZE */
+export const PARAMETER_HISTORY_PAGE_SIZE = DEFAULT_PARAMETER_HISTORY_PAGE_SIZE;
+
+export {
+  DEFAULT_PARAMETER_HISTORY_PAGE_SIZE,
+  PARAMETER_HISTORY_PAGE_SIZE_OPTIONS,
+  parseParameterHistoryPage,
+  parseParameterHistoryPageSize,
+  type ParameterHistoryPageSize,
+} from "@/lib/parameterHistoryPagination";
 
 export type ParameterHistoryEntry = {
   id: number;
@@ -30,7 +59,7 @@ export type ParameterHistoryEntry = {
 export type ParameterHistoryPage = {
   entries: ParameterHistoryEntry[];
   page: number;
-  pageSize: number;
+  pageSize: ParameterHistoryPageSize;
   totalCount: number;
   currentEpochCount: number;
   totalPages: number;
@@ -41,33 +70,55 @@ export type DashboardData = {
   /** Set when DATABASE_URL exists but the DB is unreachable or schema is missing */
   dbError?: string;
   paused: boolean;
-  jobs: Array<{
-    id: number;
-    title: string;
-    company: string;
-    score: number | null;
-    status: string;
-    url: string;
-    createdAt: Date;
-  }>;
   archivedJobCount: number;
   currentEpochLabel: string | null;
   currentParams: Record<string, unknown> | null;
 };
 
+export type JobMatchRow = {
+  id: number;
+  title: string;
+  company: string;
+  score: number | null;
+  status: string;
+  url: string;
+  createdAt: Date;
+};
+
+export type JobMatchesPage = {
+  jobs: JobMatchRow[];
+  page: number;
+  pageSize: JobMatchesPageSize;
+  totalCount: number;
+  totalPages: number;
+};
+
 const emptyDashboard: DashboardData = {
   configured: false,
   paused: false,
-  jobs: [],
   archivedJobCount: 0,
   currentEpochLabel: null,
   currentParams: null,
 };
 
-const emptyParameterHistoryPage = (page: number): ParameterHistoryPage => ({
+const emptyJobMatchesPage = (
+  page: number,
+  pageSize: JobMatchesPageSize = DEFAULT_JOB_MATCHES_PAGE_SIZE
+): JobMatchesPage => ({
+  jobs: [],
+  page,
+  pageSize,
+  totalCount: 0,
+  totalPages: 1,
+});
+
+const emptyParameterHistoryPage = (
+  page: number,
+  pageSize: ParameterHistoryPageSize = DEFAULT_PARAMETER_HISTORY_PAGE_SIZE
+): ParameterHistoryPage => ({
   entries: [],
   page,
-  pageSize: PARAMETER_HISTORY_PAGE_SIZE,
+  pageSize,
   totalCount: 0,
   currentEpochCount: 0,
   totalPages: 1,
@@ -85,9 +136,16 @@ async function getLatestProfileId(): Promise<number | null> {
   return profile?.id ?? null;
 }
 
-export async function getParameterHistoryPage(page = 1): Promise<ParameterHistoryPage> {
+export async function getParameterHistoryPage(
+  page = 1,
+  pageSizeInput?: number
+): Promise<ParameterHistoryPage> {
+  const pageSize = parseParameterHistoryPageSize(
+    pageSizeInput != null ? String(pageSizeInput) : undefined
+  );
+
   if (!db) {
-    return emptyParameterHistoryPage(page);
+    return emptyParameterHistoryPage(page, pageSize);
   }
 
   const safePage = Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
@@ -95,7 +153,7 @@ export async function getParameterHistoryPage(page = 1): Promise<ParameterHistor
   try {
     const profileId = await getLatestProfileId();
     if (!profileId) {
-      return emptyParameterHistoryPage(safePage);
+      return emptyParameterHistoryPage(safePage, pageSize);
     }
 
     const epochs = await listEpochsForProfile(profileId);
@@ -117,7 +175,7 @@ export async function getParameterHistoryPage(page = 1): Promise<ParameterHistor
         )
       );
 
-    const totalPages = Math.max(1, Math.ceil(totalCount / PARAMETER_HISTORY_PAGE_SIZE));
+    const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
     const clampedPage = Math.min(safePage, totalPages);
 
     const epochStartRows = await db
@@ -138,8 +196,8 @@ export async function getParameterHistoryPage(page = 1): Promise<ParameterHistor
       .from(schema.searchParams)
       .where(eq(schema.searchParams.profileId, profileId))
       .orderBy(desc(schema.searchParams.id))
-      .limit(PARAMETER_HISTORY_PAGE_SIZE)
-      .offset((clampedPage - 1) * PARAMETER_HISTORY_PAGE_SIZE);
+      .limit(pageSize)
+      .offset((clampedPage - 1) * pageSize);
 
     const epochIds = [...new Set(rows.map((row) => row.epochId).filter((id): id is number => id != null))];
     const paramHistoryRows =
@@ -184,14 +242,75 @@ export async function getParameterHistoryPage(page = 1): Promise<ParameterHistor
     return {
       entries: mapped,
       page: clampedPage,
-      pageSize: PARAMETER_HISTORY_PAGE_SIZE,
+      pageSize,
       totalCount,
       currentEpochCount,
       totalPages,
     };
   } catch (error) {
     console.warn("Dashboard: parameter history unavailable.", error);
-    return emptyParameterHistoryPage(safePage);
+    return emptyParameterHistoryPage(safePage, pageSize);
+  }
+}
+
+export async function getJobMatchesPage(
+  page = 1,
+  pageSizeInput?: number | JobMatchesPageSize
+): Promise<JobMatchesPage> {
+  const pageSize = parseJobMatchesPageSize(
+    pageSizeInput != null ? String(pageSizeInput) : undefined
+  );
+
+  if (!db) {
+    return emptyJobMatchesPage(page, pageSize);
+  }
+
+  const safePage = Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
+
+  try {
+    const profileId = await getLatestProfileId();
+    if (!profileId) {
+      return emptyJobMatchesPage(safePage, pageSize);
+    }
+
+    const epoch = await ensureCurrentEpoch(profileId);
+
+    const [{ value: totalCount }] = await db
+      .select({ value: count() })
+      .from(schema.jobs)
+      .where(eq(schema.jobs.epochId, epoch.id));
+
+    const totalPages = jobMatchesTotalPages(pageSize, totalCount);
+    const clampedPage = Math.min(safePage, totalPages);
+    const limit = jobMatchesLimit(pageSize, totalCount);
+    const offset = pageSize === "all" ? 0 : (clampedPage - 1) * pageSize;
+
+    const jobRows = await db
+      .select()
+      .from(schema.jobs)
+      .where(eq(schema.jobs.epochId, epoch.id))
+      .orderBy(desc(schema.jobs.score), desc(schema.jobs.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    return {
+      jobs: jobRows.map((job) => ({
+        id: job.id,
+        title: job.title,
+        company: job.company,
+        score: job.score,
+        status: job.status,
+        url: job.url,
+        createdAt: job.createdAt,
+      })),
+      page: clampedPage,
+      pageSize,
+      totalCount,
+      totalPages,
+    };
+  } catch (error) {
+    console.warn("Dashboard: job matches unavailable.", error);
+    return emptyJobMatchesPage(safePage, pageSize);
   }
 }
 
@@ -208,13 +327,11 @@ export async function getDashboardData(): Promise<DashboardData> {
       .limit(1);
 
     const profileId = await getLatestProfileId();
-    let currentEpochId: number | null = null;
     let currentEpochLabel: string | null = null;
     let archivedJobCount = 0;
 
     if (profileId) {
       const epoch = await ensureCurrentEpoch(profileId);
-      currentEpochId = epoch.id;
       currentEpochLabel = epochKindLabel(epoch.kind);
 
       const [{ value: archived }] = await db
@@ -224,15 +341,6 @@ export async function getDashboardData(): Promise<DashboardData> {
 
       archivedJobCount = archived;
     }
-
-    const jobRows = currentEpochId
-      ? await db
-          .select()
-          .from(schema.jobs)
-          .where(eq(schema.jobs.epochId, currentEpochId))
-          .orderBy(desc(schema.jobs.score), desc(schema.jobs.createdAt))
-          .limit(50)
-      : [];
 
     const [currentParamsRow] = await db
       .select()
@@ -244,15 +352,6 @@ export async function getDashboardData(): Promise<DashboardData> {
     return {
       configured: true,
       paused: settings?.paused ?? false,
-      jobs: jobRows.map((j) => ({
-        id: j.id,
-        title: j.title,
-        company: j.company,
-        score: j.score,
-        status: j.status,
-        url: j.url,
-        createdAt: j.createdAt,
-      })),
       archivedJobCount,
       currentEpochLabel,
       currentParams: currentParamsRow

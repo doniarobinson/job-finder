@@ -4,9 +4,11 @@ import {
   DatabaseNotConfiguredBanner,
   DatabaseUnavailableBanner,
 } from "@/app/components/DatabaseStatusBanners";
+import { JobMatchesSection } from "@/app/components/JobMatchesSection";
 import { ParameterHistorySection } from "@/app/components/ParameterHistorySection";
 import { SearchParamsTable } from "@/app/components/SearchParamsDisplay";
-import { getDashboardData, getParameterHistoryPage } from "@/lib/dashboard";
+import { getDashboardData, getJobMatchesPage, getParameterHistoryPage } from "@/lib/dashboard";
+import { parseDashboardSearchParams } from "@/lib/dashboardSearchParams";
 import { searchParamsSchema } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -28,10 +30,14 @@ function HeaderDescription() {
 
 function DashboardMain({
   data,
+  jobMatches,
   parameterHistory,
+  searchParams,
 }: {
   data: Awaited<ReturnType<typeof getDashboardData>>;
+  jobMatches: Awaited<ReturnType<typeof getJobMatchesPage>>;
   parameterHistory: Awaited<ReturnType<typeof getParameterHistoryPage>>;
+  searchParams: ReturnType<typeof parseDashboardSearchParams>;
 }) {
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 space-y-10 px-6 py-10">
@@ -41,6 +47,9 @@ function DashboardMain({
 
       <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
         <h2 className="text-lg font-medium">Current search parameters</h2>
+        <p className="mt-0.5 text-xs text-zinc-500">
+          (Initially set by RESUME_TEXT in env file, then iterated on with each API call)
+        </p>
         {data.currentParams ? (
           <SearchParamsTable
             params={searchParamsSchema.parse(data.currentParams)}
@@ -54,59 +63,29 @@ function DashboardMain({
         )}
       </section>
 
-      <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-medium">Job matches</h2>
-        {data.jobs.length === 0 ? (
-          <p className="mt-2 text-sm text-zinc-500">No jobs stored yet for the current era.</p>
-        ) : (
-          <ul className="mt-4 divide-y divide-zinc-100">
-            {data.jobs.map((job) => (
-              <li
-                key={job.id}
-                className="flex flex-col gap-1 py-4 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div>
-                  <a
-                    href={job.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-medium text-blue-700 hover:underline"
-                  >
-                    {job.title}
-                  </a>
-                  <p className="text-sm text-zinc-600">
-                    {job.company} · {job.status}
-                  </p>
-                </div>
-                <span className="text-sm font-mono text-zinc-500">
-                  score {(job.score ?? 0).toFixed(3)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <JobMatchesSection jobMatches={jobMatches} searchParams={searchParams} />
 
-      <ParameterHistorySection history={parameterHistory} />
+      <ParameterHistorySection history={parameterHistory} searchParams={searchParams} />
     </main>
   );
 }
 
-function parseHistoryPage(value: string | undefined): number {
-  const page = Number.parseInt(value ?? "1", 10);
-  return Number.isFinite(page) && page > 0 ? page : 1;
-}
-
 export default async function Home({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: {
-  searchParams: Promise<{ historyPage?: string }>;
+  searchParams: Promise<{
+    historyPage?: string;
+    historyPageSize?: string;
+    jobsPage?: string;
+    jobsPageSize?: string;
+  }>;
 }) {
-  const { historyPage: historyPageParam } = await searchParams;
-  const historyPage = parseHistoryPage(historyPageParam);
-  const [data, parameterHistory] = await Promise.all([
+  const rawSearchParams = await searchParamsPromise;
+  const searchParams = parseDashboardSearchParams(rawSearchParams);
+  const [data, jobMatches, parameterHistory] = await Promise.all([
     getDashboardData(),
-    getParameterHistoryPage(historyPage),
+    getJobMatchesPage(searchParams.jobsPage, searchParams.jobsPageSize),
+    getParameterHistoryPage(searchParams.historyPage, searchParams.historyPageSize),
   ]);
 
   if (data.configured) {
@@ -122,7 +101,12 @@ export default async function Home({
             </footer>
           }
         >
-          <DashboardMain data={data} parameterHistory={parameterHistory} />
+          <DashboardMain
+            data={data}
+            jobMatches={jobMatches}
+            parameterHistory={parameterHistory}
+            searchParams={searchParams}
+          />
         </ConfiguredAgentShell>
       </div>
     );
@@ -135,7 +119,12 @@ export default async function Home({
           <HeaderDescription />
         </div>
       </header>
-      <DashboardMain data={data} parameterHistory={parameterHistory} />
+      <DashboardMain
+        data={data}
+        jobMatches={jobMatches}
+        parameterHistory={parameterHistory}
+        searchParams={searchParams}
+      />
     </div>
   );
 }
