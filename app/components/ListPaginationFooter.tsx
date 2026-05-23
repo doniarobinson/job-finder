@@ -22,7 +22,7 @@ export function ListPaginationFooter({
   return (
     <div
       className={
-        className ?? "mt-6 space-y-3 border-t border-zinc-100 pt-4"
+        className ?? "mt-6 space-y-3 border-t border-border-subtle pt-4"
       }
     >
       <div className="flex justify-end">{pageSizeSelect}</div>
@@ -30,7 +30,7 @@ export function ListPaginationFooter({
         <PaginationControl href={previousHref} disabled={page <= 1}>
           Previous
         </PaginationControl>
-        <span className="min-w-[5.5rem] text-center text-xs tabular-nums text-zinc-600">
+        <span className="min-w-[5.5rem] text-center text-xs tabular-nums text-muted">
           Page {page} of {totalPages}
         </span>
         <PaginationControl href={nextHref} disabled={page >= totalPages}>

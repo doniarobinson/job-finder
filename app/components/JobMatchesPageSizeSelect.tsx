@@ -21,12 +21,12 @@ export function JobMatchesPageSizeSelect({
   const router = useRouter();
 
   return (
-    <label className="flex items-center gap-2 text-xs text-zinc-500">
+    <label className="flex items-center gap-2 text-xs text-muted">
       Jobs per page
       <select
         value={pageSize}
         aria-label="Job matches page size"
-        className="rounded-md border border-zinc-300 bg-white px-2 py-1 text-sm text-zinc-800"
+        className="rounded-md border border-border bg-surface px-2 py-1 text-sm text-foreground"
         onChange={(event) => {
           const value = event.target.value;
           const nextSize: JobMatchesPageSize =

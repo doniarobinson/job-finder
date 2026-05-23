@@ -17,7 +17,7 @@ export function PaginationControl({
     return (
       <span
         aria-disabled="true"
-        className={`${className} cursor-not-allowed border-zinc-200 bg-zinc-50 text-zinc-400`}
+        className={`${className} cursor-not-allowed border-border-subtle bg-pill-neutral text-muted/60`}
       >
         {children}
       </span>
@@ -27,7 +27,7 @@ export function PaginationControl({
   return (
     <Link
       href={href}
-      className={`${className} border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50`}
+      className={`${className} border-border bg-surface text-foreground hover:bg-pill-neutral`}
     >
       {children}
     </Link>

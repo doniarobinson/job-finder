@@ -18,13 +18,13 @@ function EpochDivider({
   return (
     <div
       aria-label={`${label} epoch boundary`}
-      className="flex items-center gap-3 py-2.5 text-base font-semibold uppercase tracking-wide text-zinc-600"
+      className="flex items-center gap-3 py-2.5 text-base font-semibold uppercase tracking-wide text-muted"
     >
-      <span className="h-px flex-1 bg-zinc-200" />
+      <span className="h-px flex-1 bg-border-subtle" />
       <span>
         {label} · {startedAt.toLocaleString()}
       </span>
-      <span className="h-px flex-1 bg-zinc-200" />
+      <span className="h-px flex-1 bg-border-subtle" />
     </div>
   );
 }
@@ -41,9 +41,9 @@ function EntryHeader({ entry }: { entry: ParameterHistoryPage["entries"][number]
   if (heading) {
     return (
       <>
-        <h3 className="text-sm font-semibold tracking-tight text-zinc-900">{heading}</h3>
+        <h3 className="text-sm font-semibold tracking-tight text-foreground">{heading}</h3>
         <time
-          className="mt-0.5 block text-xs text-zinc-500"
+          className="mt-0.5 block text-xs text-muted"
           dateTime={entry.createdAt.toISOString()}
         >
           {entry.createdAt.toLocaleString()}
@@ -53,7 +53,7 @@ function EntryHeader({ entry }: { entry: ParameterHistoryPage["entries"][number]
   }
 
   return (
-    <time className="text-xs text-zinc-500" dateTime={entry.createdAt.toISOString()}>
+    <time className="text-xs text-muted" dateTime={entry.createdAt.toISOString()}>
       {entry.createdAt.toLocaleString()}
     </time>
   );
@@ -69,14 +69,14 @@ export function ParameterHistorySection({
   const { entries, page, pageSize, currentEpochCount, totalPages, totalCount } = history;
 
   return (
-    <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+    <section className="rounded-xl border border-border bg-surface p-6 shadow-sm">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-lg font-medium">Parameter history</h2>
-          <p className="mt-0.5 text-xs text-zinc-500">(Newest to oldest)</p>
+          <p className="mt-0.5 text-xs text-muted">(Newest to oldest)</p>
         </div>
         {currentEpochCount > 0 && (
-          <p className="text-sm text-zinc-500 sm:pt-0.5">
+          <p className="text-sm text-muted sm:pt-0.5">
             {currentEpochCount} saved version{currentEpochCount === 1 ? "" : "s"} for current
             epoch/era
           </p>
@@ -84,13 +84,13 @@ export function ParameterHistorySection({
       </div>
 
       {entries.length === 0 ? (
-        <p className="mt-2 text-sm text-zinc-500">No parameter versions saved yet.</p>
+        <p className="mt-2 text-sm text-muted">No parameter versions saved yet.</p>
       ) : (
         <>
           <ul className="mt-4 space-y-6">
             {entries.map((entry) => (
               <li key={entry.id}>
-                <div className="rounded-lg border border-zinc-100 px-4 py-3">
+                <div className="rounded-lg border border-border-subtle px-4 py-3">
                   <div className="mb-2">
                     <EntryHeader entry={entry} />
                   </div>

@@ -68,23 +68,23 @@ export function SystemMessagePanel() {
   return (
     <section
       aria-label="System Message"
-      className="border-b border-zinc-700 bg-zinc-900 text-zinc-50"
+      className="border-b border-border bg-terminal text-terminal-foreground"
     >
       <div className="mx-auto max-w-5xl px-6 py-4">
-        <h2 className="font-mono text-xs font-semibold uppercase tracking-wider text-zinc-200">
+        <h2 className="font-mono text-xs font-semibold uppercase tracking-wider text-terminal-muted">
           System Message
         </h2>
         {entry ? (
           <>
-            <p className="mt-2 font-mono text-xs text-zinc-300">
+            <p className="mt-2 font-mono text-xs text-terminal-muted">
               {formatTimestamp(entry.timestamp)}
             </p>
-            <p className="mt-2 whitespace-pre-wrap font-mono text-sm leading-relaxed text-white">
+            <p className="mt-2 whitespace-pre-wrap font-mono text-sm leading-relaxed text-terminal-foreground">
               {entry.text}
             </p>
           </>
         ) : (
-          <p className="mt-2 font-mono text-sm leading-relaxed text-zinc-300">No agent messages yet.</p>
+          <p className="mt-2 font-mono text-sm leading-relaxed text-terminal-muted">No agent messages yet.</p>
         )}
       </div>
     </section>

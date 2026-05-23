@@ -1,26 +1,32 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+/* Tidal Tech — cyan canvas, teal primary */
+@theme {
+  --color-background: #ecfeff;
+  --color-foreground: #083344;
+  --color-surface: #ffffff;
+  --color-muted: #155e75;
+  --color-border: #0e7490;
+  --color-border-subtle: #a5f3fc;
+  --color-divider: #0891b2;
+  --color-primary: #0e7490;
+  --color-primary-foreground: #ffffff;
+  --color-link: #0e7490;
+  --color-pill-neutral: #cffafe;
+  --color-pill-neutral-foreground: #155e75;
+  --color-pill-new: #a5f3fc;
+  --color-pill-new-foreground: #155e75;
+  --color-status: #cffafe;
+  --color-status-foreground: #0e7490;
+  --color-terminal: #083344;
+  --color-terminal-muted: #a5f3fc;
+  --color-terminal-foreground: #ecfeff;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  body {
+    @apply bg-background text-foreground font-sans;
   }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
 }

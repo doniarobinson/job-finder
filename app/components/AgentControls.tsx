@@ -82,7 +82,7 @@ export function AgentControls() {
         type="button"
         disabled={busy}
         onClick={rebootstrap}
-        className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50 disabled:opacity-50"
+        className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-foreground hover:bg-pill-neutral disabled:opacity-50"
       >
         {rebootstrapLoading ? "Re-bootstrapping…" : "Re-bootstrap from env"}
       </button>
@@ -90,7 +90,7 @@ export function AgentControls() {
         type="button"
         disabled={busy}
         onClick={runCycle}
-        className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+        className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
       >
         {cycleLoading ? "Running cycle…" : "Run cycle now"}
       </button>

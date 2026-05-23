@@ -14,7 +14,7 @@ function CellTags({
   highlightItems?: ReadonlySet<string>;
 }) {
   if (items.length === 0) {
-    return <span className="text-zinc-500">{emptyLabel}</span>;
+    return <span className="text-muted">{emptyLabel}</span>;
   }
 
   const highlightLower = highlightItems
@@ -28,8 +28,8 @@ function CellTags({
           key={item}
           className={
             highlightLower?.has(item.toLowerCase())
-              ? "inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-900"
-              : "inline-flex rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-800"
+              ? "inline-flex rounded-full bg-pill-new px-2 py-0.5 text-xs text-pill-new-foreground"
+              : "inline-flex rounded-full bg-pill-neutral px-2 py-0.5 text-xs text-pill-neutral-foreground"
           }
         >
           {item}
@@ -41,7 +41,7 @@ function CellTags({
 
 function CellPill({ children }: { children: ReactNode }) {
   return (
-    <span className="inline-flex rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-800">
+    <span className="inline-flex rounded-full bg-pill-neutral px-2 py-0.5 text-xs text-pill-neutral-foreground">
       {children}
     </span>
   );
@@ -120,21 +120,21 @@ export function SearchParamsTable({
       <table className="w-full text-sm">
         <tbody>
           {rows.map(({ label, footnote, value }) => (
-            <tr key={label} className="border-t border-zinc-100 first:border-t-0">
+            <tr key={label} className="border-t border-border-subtle first:border-t-0">
               <th
                 scope="row"
-                className="w-36 py-1.5 pr-4 align-top text-left text-xs font-medium text-zinc-500"
+                className="w-36 py-1.5 pr-4 align-top text-left text-xs font-medium text-muted"
               >
                 {label}
                 {footnote && <span aria-hidden="true">*</span>}
               </th>
-              <td className="py-1.5 align-top text-zinc-800">{value}</td>
+              <td className="py-1.5 align-top text-foreground">{value}</td>
             </tr>
           ))}
         </tbody>
       </table>
       {detailed && (
-        <p className="mt-5 text-xs text-zinc-400">
+        <p className="mt-5 text-xs text-muted/70">
           * {NEGATIVE_KEYWORDS_DESCRIPTION}
         </p>
       )}

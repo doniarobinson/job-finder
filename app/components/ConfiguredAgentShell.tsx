@@ -15,7 +15,7 @@ export function ConfiguredAgentShell({
 }) {
   return (
     <SystemMessageProvider>
-      <header className="border-b border-zinc-200 bg-white">
+      <header className="border-b border-border bg-surface">
         <div className="mx-auto flex max-w-5xl flex-col gap-4 px-6 py-8 sm:flex-row sm:items-center sm:justify-between">
           <div className="max-w-2xl">{headerDescription}</div>
           <AgentControls />

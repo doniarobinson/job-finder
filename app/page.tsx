@@ -17,7 +17,7 @@ function HeaderDescription() {
   return (
     <>
       <h1 className="text-2xl font-semibold tracking-tight">Job Finder Agent</h1>
-      <p className="mt-1 text-sm leading-relaxed text-zinc-600">
+      <p className="mt-1 text-sm leading-relaxed text-muted">
         The Job Finder Agent is a fully autonomous agentic AI that works on your behalf to find
         jobs worth applying to. It starts with your resume—extracting your skills, target roles,
         and location—then searches live job listings, scores each one against your background, and
@@ -45,9 +45,9 @@ function DashboardMain({
 
       {!data.configured && !data.dbError && <DatabaseNotConfiguredBanner />}
 
-      <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+      <section className="rounded-xl border border-border bg-surface p-6 shadow-sm">
         <h2 className="text-lg font-medium">Current search parameters</h2>
-        <p className="mt-0.5 text-xs text-zinc-500">
+        <p className="mt-0.5 text-xs text-muted">
           (Initially set by RESUME_TEXT in env file, then iterated on with each API call)
         </p>
         {data.currentParams ? (
@@ -57,7 +57,7 @@ function DashboardMain({
             className="mt-4"
           />
         ) : (
-          <p className="mt-2 text-sm text-zinc-500">
+          <p className="mt-2 text-sm text-muted">
             No parameters yet. Set RESUME_TEXT and run an agent cycle.
           </p>
         )}
@@ -90,11 +90,11 @@ export default async function Home({
 
   if (data.configured) {
     return (
-      <div className="flex min-h-screen flex-col bg-zinc-50 text-zinc-900">
+      <div className="flex min-h-screen flex-col bg-background text-foreground">
         <ConfiguredAgentShell
           headerDescription={<HeaderDescription />}
           footer={
-            <footer className="border-t border-zinc-200 bg-white">
+            <footer className="border-t border-border bg-surface">
               <div className="mx-auto flex max-w-5xl items-center justify-end px-6 py-4">
                 <AgentStatusBadge paused={data.paused} />
               </div>
@@ -113,8 +113,8 @@ export default async function Home({
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-zinc-50 text-zinc-900">
-      <header className="border-b border-zinc-200 bg-white">
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
+      <header className="border-b border-border bg-surface">
         <div className="mx-auto max-w-5xl px-6 py-8">
           <HeaderDescription />
         </div>
