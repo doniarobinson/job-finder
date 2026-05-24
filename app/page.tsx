@@ -1,4 +1,3 @@
-import { AgentStatusBadge } from "@/app/components/AgentStatusBadge";
 import { ConfiguredAgentShell } from "@/app/components/ConfiguredAgentShell";
 import {
   DatabaseNotConfiguredBanner,
@@ -7,6 +6,7 @@ import {
 import { JobMatchesSection } from "@/app/components/JobMatchesSection";
 import { ParameterHistorySection } from "@/app/components/ParameterHistorySection";
 import { SearchParamsTable } from "@/app/components/SearchParamsDisplay";
+import { TechStackList } from "@/app/components/TechStackList";
 import { getDashboardData, getJobMatchesPage, getParameterHistoryPage } from "@/lib/dashboard";
 import {
   serializeJobMatchesPage,
@@ -23,11 +23,12 @@ function HeaderDescription() {
       <h1 className="text-2xl font-semibold tracking-tight">Job Finder Agent</h1>
       <p className="mt-1 text-sm leading-relaxed text-muted">
         The Job Finder Agent is a fully autonomous agentic AI that works on your behalf to find
-        jobs worth applying to. It starts with your resume—extracting your skills, target roles,
-        and location—then searches live job listings, scores each one against your background, and
+        jobs worth applying to. It starts with your resume - extracting your skills, target roles,
+        and location - then searches live job listings, scores each one against your background, and
         saves the best matches here. After every run, it learns from the listings that fit well and
         updates its search terms so the next cycle is smarter than the last.
       </p>
+      <TechStackList />
     </>
   );
 }
@@ -96,16 +97,7 @@ export default async function Home({
   if (data.configured) {
     return (
       <div className="flex min-h-screen flex-col bg-background text-foreground">
-        <ConfiguredAgentShell
-          headerDescription={<HeaderDescription />}
-          footer={
-            <footer className="border-t border-border bg-surface">
-              <div className="mx-auto flex max-w-5xl items-center justify-end px-6 py-4">
-                <AgentStatusBadge paused={data.paused} />
-              </div>
-            </footer>
-          }
-        >
+        <ConfiguredAgentShell headerDescription={<HeaderDescription />} paused={data.paused}>
           <DashboardMain
             data={data}
             jobMatches={serializedJobMatches}

@@ -10,13 +10,25 @@ Built for **Vercel/Neon** with **Inngest** orchestration and **Postgres** state.
 2. ~~Run search and update search params via the dashboard button before enabling a cron job~~ (manual run in UI)
 3. Implement a cron job to run every 24 hours
 
-## Stack
+## Tech used
 
-- Next.js App Router
-- Drizzle ORM + [Neon Postgres](https://neon.com/docs/guides/vercel-managed-integration) (`DATABASE_URL` from Vercel Storage)
-- Inngest (`job-finder/cycle.run` workflow)
-- Adzuna Jobs API
-- Google Gemini (`gemini-2.5-flash` + `gemini-embedding-001`) via Vercel AI SDK (optional; keyword fallback without key)
+- React 19
+- Next.js 16 - dashboard and API routes
+- Adzuna Jobs API - live job listings
+- Vercel - hosting and deployment
+- Neon Postgres - database
+- Google Gemini 2.5 Flash - search parameter refinement
+- Google Gemini Embedding 001 - resume-to-job similarity scoring
+
+## Additional tech used
+
+- Tailwind CSS v4
+- Drizzle ORM - schema and queries
+- Inngest - background workflow orchestration
+- Vercel Cron - scheduled daily agent cycles
+- Vercel AI SDK - LLM and embedding calls
+- Vitest - unit tests
+- Zod - runtime validation
 
 ## Quick start
 
