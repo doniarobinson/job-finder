@@ -22,6 +22,14 @@ export const parsedProfileSchema = z.object({
 
 export type ParsedProfile = z.infer<typeof parsedProfileSchema>;
 
+export type ResumeParseSource = "gemini" | "heuristic";
+
+export type ResumeParseMeta = {
+  source: ResumeParseSource;
+  geminiConfigured: boolean;
+  geminiFailed: boolean;
+};
+
 export type NormalizedJob = {
   externalId: string;
   title: string;
@@ -48,4 +56,5 @@ export type UpdateResumeResult = {
   searchParamsReset: boolean;
   epochId?: number;
   epochStarted?: boolean;
+  resumeParseMeta: ResumeParseMeta;
 };

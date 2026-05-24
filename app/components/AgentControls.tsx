@@ -8,6 +8,7 @@ import {
   triggerAgentRebootstrap,
 } from "@/app/actions/agent";
 import { useSystemMessage } from "@/app/components/SystemMessage";
+import { formatResumeParseMessage } from "@/lib/ai/parseResume";
 import type { AgentCycleResult, UpdateResumeResult } from "@/lib/types";
 
 function formatCycleResult(result: AgentCycleResult): string {
@@ -28,7 +29,8 @@ function formatRebootstrapResult(result: UpdateResumeResult): string {
   const epochNote = result.epochStarted
     ? " New agent era started; prior jobs and history are archived."
     : "";
-  return `Re-bootstrapped from RESUME_TEXT — ${result.searchParams.keywords.length} keyword${result.searchParams.keywords.length === 1 ? "" : "s"} (${keywords}${suffix}).${epochNote}`;
+  const parseNote = formatResumeParseMessage(result.resumeParseMeta, result.parsed);
+  return `Re-bootstrapped from RESUME_TEXT — ${result.searchParams.keywords.length} keyword${result.searchParams.keywords.length === 1 ? "" : "s"} (${keywords}${suffix}). ${parseNote}${epochNote}`;
 }
 
 export function AgentControls({ onDark = false }: { onDark?: boolean }) {

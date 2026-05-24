@@ -106,6 +106,11 @@ describe("POST /api/agent/update-resume", () => {
       },
       created: false,
       searchParamsReset: false,
+      resumeParseMeta: {
+        source: "heuristic" as const,
+        geminiConfigured: false,
+        geminiFailed: false,
+      },
     };
     updateProfileResumeMock.mockResolvedValue(updateResult);
 

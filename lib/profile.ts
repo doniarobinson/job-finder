@@ -110,7 +110,7 @@ export async function updateProfileResume(
   const trimmed = resumeText.trim();
   if (!trimmed) throw new Error("Resume text is required");
 
-  const parsed = await parseResume(trimmed);
+  const { profile: parsed, meta: resumeParseMeta } = await parseResume(trimmed);
   const resetSearchParams = options?.resetSearchParams ?? false;
   const existing = await getLatestProfile();
 
@@ -136,6 +136,7 @@ export async function updateProfileResume(
       searchParamsReset: true,
       epochId,
       epochStarted: true,
+      resumeParseMeta,
     };
   }
 
@@ -173,6 +174,7 @@ export async function updateProfileResume(
       searchParamsReset,
       epochId,
       epochStarted,
+      resumeParseMeta,
     };
   }
 
@@ -182,6 +184,7 @@ export async function updateProfileResume(
     searchParams: searchParamsSchema.parse(currentParamsRow.paramsJson),
     created: false,
     searchParamsReset: false,
+    resumeParseMeta,
   };
 }
 
