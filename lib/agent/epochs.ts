@@ -2,9 +2,11 @@ import { createHash } from "crypto";
 
 import { and, desc, eq, isNull } from "drizzle-orm";
 
+import type { AgentEpochKind } from "@/lib/agent/epochLabels";
 import { db, schema } from "@/lib/db";
 
-export type AgentEpochKind = "initial_bootstrap" | "rebootstrap";
+export type { AgentEpochKind } from "@/lib/agent/epochLabels";
+export { epochKindLabel } from "@/lib/agent/epochLabels";
 
 export function hashResume(resumeText: string): string {
   return createHash("sha256").update(resumeText).digest("hex").slice(0, 16);
@@ -109,6 +111,3 @@ export async function listEpochsForProfile(profileId: number) {
     .orderBy(desc(schema.agentEpochs.id));
 }
 
-export function epochKindLabel(kind: AgentEpochKind): string {
-  return kind === "rebootstrap" ? "Re-bootstrap" : "Initial bootstrap";
-}
