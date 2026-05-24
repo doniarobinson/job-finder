@@ -5,6 +5,7 @@ import {
   ensureCurrentEpoch,
   type AgentEpochKind,
 } from "@/lib/agent/epochs";
+import { parseResume } from "@/lib/ai/parseResume";
 import { db, schema } from "@/lib/db";
 import {
   parsedProfileSchema,
@@ -13,48 +14,8 @@ import {
   type SearchParams,
   type UpdateResumeResult,
 } from "@/lib/types";
-import { inferResumeLocations } from "@/lib/resumeLocations";
 
-function extractList(text: string, pattern: RegExp): string[] {
-  const match = text.match(pattern);
-  if (!match?.[1]) return [];
-  return match[1]
-    .split(/[,;|]/)
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .slice(0, 20);
-}
-
-export function parseResume(resumeText: string): ParsedProfile {
-  const lower = resumeText.toLowerCase();
-  const skills = extractList(resumeText, /skills?:\s*([^\n]+)/i);
-  const titles = extractList(resumeText, /(?:titles?|roles?):\s*([^\n]+)/i);
-  const explicitLocations = extractList(resumeText, /locations?:\s*([^\n]+)/i);
-  const locations = inferResumeLocations(resumeText, explicitLocations);
-
-  const yearsMatch = resumeText.match(/(\d+)\+?\s*years?/i);
-  const yearsExperience = yearsMatch ? Number(yearsMatch[1]) : undefined;
-
-  const inferredSkills =
-    skills.length > 0
-      ? skills
-      : ["typescript", "react", "node", "python", "sql"].filter((s) => lower.includes(s));
-
-  const inferredTitles =
-    titles.length > 0
-      ? titles
-      : ["software engineer", "developer", "engineer"].filter((t) =>
-          lower.includes(t.split(" ")[0] ?? "")
-        );
-
-  return parsedProfileSchema.parse({
-    skills: inferredSkills,
-    titles: inferredTitles.length ? inferredTitles : ["Software Engineer"],
-    yearsExperience,
-    locations,
-    summary: resumeText.slice(0, 500),
-  });
-}
+export { parseResumeHeuristic } from "@/lib/ai/parseResume";
 
 export function defaultSearchParams(profile: ParsedProfile): SearchParams {
   return searchParamsSchema.parse({
@@ -149,7 +110,7 @@ export async function updateProfileResume(
   const trimmed = resumeText.trim();
   if (!trimmed) throw new Error("Resume text is required");
 
-  const parsed = parseResume(trimmed);
+  const parsed = await parseResume(trimmed);
   const resetSearchParams = options?.resetSearchParams ?? false;
   const existing = await getLatestProfile();
 

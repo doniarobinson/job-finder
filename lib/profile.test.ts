@@ -6,14 +6,22 @@ import type { SearchParams } from "@/lib/types";
 import {
   defaultSearchParams,
   ensureBootstrapProfile,
-  parseResume,
+  parseResumeHeuristic,
   rebootstrapProfileFromEnv,
   updateProfileResume,
 } from "./profile";
 
-describe("parseResume", () => {
+vi.mock("@/lib/ai/parseResume", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/ai/parseResume")>();
+  return {
+    ...actual,
+    parseResume: vi.fn((resumeText: string) => Promise.resolve(actual.parseResumeHeuristic(resumeText))),
+  };
+});
+
+describe("parseResumeHeuristic", () => {
   it("parses explicit skills, titles, and locations lines", () => {
-    const parsed = parseResume(
+    const parsed = parseResumeHeuristic(
       "Skills: TypeScript, React\nTitles: Staff Engineer, Tech Lead\nLocations: NYC, Remote\n8 years experience"
     );
 
@@ -24,7 +32,7 @@ describe("parseResume", () => {
   });
 
   it("infers skills and titles from resume body when lines are missing", () => {
-    const parsed = parseResume(
+    const parsed = parseResumeHeuristic(
       "Experienced typescript and react developer. Former software engineer at Acme."
     );
 
@@ -34,13 +42,13 @@ describe("parseResume", () => {
   });
 
   it("uses a default title when none can be inferred", () => {
-    const parsed = parseResume("Short bio with no role or skill keywords.");
+    const parsed = parseResumeHeuristic("Short bio with no role or skill keywords.");
 
     expect(parsed.titles).toEqual(["Software Engineer"]);
   });
 
   it("infers City, ST from the resume header when Locations line is missing", () => {
-    const parsed = parseResume(
+    const parsed = parseResumeHeuristic(
       `Jane Doe
 Brooklyn, NY
 jane@example.com
@@ -53,7 +61,7 @@ Engineer at Acme`
   });
 
   it("infers location from the experience section when the header has none", () => {
-    const parsed = parseResume(
+    const parsed = parseResumeHeuristic(
       `Jane Doe
 jane@example.com
 
@@ -68,7 +76,7 @@ Staff Engineer, Acme — Portland, OR
 
 describe("defaultSearchParams", () => {
   it("caps keywords and title variants from the profile", () => {
-    const profile = parseResume(
+    const profile = parseResumeHeuristic(
       `Skills: ${Array.from({ length: 12 }, (_, i) => `skill${i}`).join(", ")}
 Titles: ${Array.from({ length: 5 }, (_, i) => `Title ${i}`).join(", ")}
 Locations: Austin`

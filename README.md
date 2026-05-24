@@ -17,7 +17,7 @@ Built for **Vercel/Neon** with **Inngest** orchestration and **Postgres** state.
 - Adzuna Jobs API - live job listings
 - Vercel - hosting and deployment
 - Neon Postgres - database
-- Google Gemini 2.5 Flash - search parameter refinement
+- Google Gemini 2.5 Flash - search parameter refinement and resume parsing
 - Google Gemini Embedding 001 - resume-to-job similarity scoring
 
 ## Additional tech used
