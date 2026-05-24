@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 
 import type { DashboardSearchParams } from "@/lib/dashboardSearchParams";
 import {
@@ -24,14 +24,16 @@ export function useDashboardPagination<T extends PaginatedPayload>({
   deserialize: (json: unknown) => T;
   buildUrlUpdates: (page: number, pageSize: T["pageSize"]) => Partial<DashboardSearchParams>;
 }) {
+  const [prevInitialData, setPrevInitialData] = useState(initialData);
   const [data, setData] = useState(initialData);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  if (initialData !== prevInitialData) {
+    setPrevInitialData(initialData);
     setData(initialData);
     setError(null);
-  }, [initialData]);
+  }
 
   const load = useCallback(
     async (page: number, pageSize: T["pageSize"]) => {

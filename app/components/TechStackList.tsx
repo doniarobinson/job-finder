@@ -11,10 +11,8 @@ export function TechStackList() {
           <li>Adzuna Jobs API - live job listings</li>
           <li>Vercel - hosting and deployment</li>
           <li>Neon Postgres - database</li>
-          <li>Google Gemini 2.5 Flash - search parameter refinement and resume parsing</li>
-          <li>
-            Google Gemini Embedding 001 - resume-to-job similarity scoring
-          </li>
+          <li>Google Gemini 2.5 Flash - resume parsing, search parameter refinement</li>
+          <li>Google Gemini Embedding 001 - resume-to-job similarity scoring</li>
         </ul>
       </details>
 
@@ -26,7 +24,7 @@ export function TechStackList() {
           <li>Tailwind CSS v4</li>
           <li>Drizzle ORM - schema and queries</li>
           <li>Inngest - background workflow orchestration</li>
-          <li>Vercel Cron - scheduled daily agent cycles</li>
+          <li>Vercel Cron - scheduled daily agent cycles (production only)</li>
           <li>Vercel AI SDK - LLM and embedding calls</li>
           <li>Vitest - unit tests</li>
           <li>Zod - runtime validation</li>
