@@ -31,7 +31,7 @@ function formatRebootstrapResult(result: UpdateResumeResult): string {
   return `Re-bootstrapped from RESUME_TEXT — ${result.searchParams.keywords.length} keyword${result.searchParams.keywords.length === 1 ? "" : "s"} (${keywords}${suffix}).${epochNote}`;
 }
 
-export function AgentControls() {
+export function AgentControls({ onDark = false }: { onDark?: boolean }) {
   const router = useRouter();
   const { publishSystemMessage } = useSystemMessage();
   const [cycleLoading, setCycleLoading] = useState(false);
@@ -76,13 +76,26 @@ export function AgentControls() {
     }
   }
 
+  const toolbarButtonClass =
+    "inline-flex h-9 items-center rounded-md px-3.5 text-sm font-medium transition-colors disabled:opacity-50";
+
+  const secondaryButtonClass = onDark
+    ? `${toolbarButtonClass} border border-terminal-muted/30 bg-terminal-muted/5 text-terminal-foreground hover:bg-terminal-muted/15`
+    : `${toolbarButtonClass} border border-border bg-surface text-foreground hover:bg-pill-neutral`;
+
+  const primaryButtonClass = onDark
+    ? `${toolbarButtonClass} border border-transparent bg-primary text-primary-foreground hover:bg-primary/90`
+    : `${toolbarButtonClass} rounded-full bg-primary text-primary-foreground hover:opacity-90`;
+
   return (
-    <div className="flex flex-wrap items-center justify-end gap-3">
+    <div
+      className={`flex flex-wrap items-center gap-2 ${onDark ? "justify-start" : "justify-end"}`}
+    >
       <button
         type="button"
         disabled={busy}
         onClick={rebootstrap}
-        className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-foreground hover:bg-pill-neutral disabled:opacity-50"
+        className={secondaryButtonClass}
       >
         {rebootstrapLoading ? "Re-bootstrapping…" : "Re-bootstrap from env"}
       </button>
@@ -90,7 +103,7 @@ export function AgentControls() {
         type="button"
         disabled={busy}
         onClick={runCycle}
-        className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
+        className={primaryButtonClass}
       >
         {cycleLoading ? "Running cycle…" : "Run cycle now"}
       </button>
