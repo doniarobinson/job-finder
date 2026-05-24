@@ -11,7 +11,7 @@ export function TechStackList() {
           <li>Adzuna Jobs API - live job listings</li>
           <li>Vercel - hosting and deployment</li>
           <li>Neon Postgres - database</li>
-          <li>Google Gemini 2.5 Flash - search parameter refinement</li>
+          <li>Google Gemini 2.5 Flash - search parameter refinement and resume parsing</li>
           <li>
             Google Gemini Embedding 001 - resume-to-job similarity scoring
           </li>

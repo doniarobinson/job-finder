@@ -6,7 +6,7 @@ import { ListPaginationFooter } from "@/app/components/ListPaginationFooter";
 import { ParameterHistoryPageSizeSelect } from "@/app/components/ParameterHistoryPageSizeSelect";
 import { SearchParamsTable } from "@/app/components/SearchParamsDisplay";
 import { useDashboardPagination } from "@/app/hooks/useDashboardPagination";
-import { epochKindLabel } from "@/lib/agent/epochs";
+import { epochKindLabel } from "@/lib/agent/epochLabels";
 import {
   deserializeParameterHistoryPage,
   parameterHistoryUrlUpdates,
