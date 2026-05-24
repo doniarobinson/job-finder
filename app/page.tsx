@@ -8,6 +8,10 @@ import { JobMatchesSection } from "@/app/components/JobMatchesSection";
 import { ParameterHistorySection } from "@/app/components/ParameterHistorySection";
 import { SearchParamsTable } from "@/app/components/SearchParamsDisplay";
 import { getDashboardData, getJobMatchesPage, getParameterHistoryPage } from "@/lib/dashboard";
+import {
+  serializeJobMatchesPage,
+  serializeParameterHistoryPage,
+} from "@/lib/dashboardPaginationApi";
 import { parseDashboardSearchParams } from "@/lib/dashboardSearchParams";
 import { searchParamsSchema } from "@/lib/types";
 
@@ -32,12 +36,10 @@ function DashboardMain({
   data,
   jobMatches,
   parameterHistory,
-  searchParams,
 }: {
   data: Awaited<ReturnType<typeof getDashboardData>>;
-  jobMatches: Awaited<ReturnType<typeof getJobMatchesPage>>;
-  parameterHistory: Awaited<ReturnType<typeof getParameterHistoryPage>>;
-  searchParams: ReturnType<typeof parseDashboardSearchParams>;
+  jobMatches: ReturnType<typeof serializeJobMatchesPage>;
+  parameterHistory: ReturnType<typeof serializeParameterHistoryPage>;
 }) {
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 space-y-10 px-6 py-10">
@@ -63,9 +65,9 @@ function DashboardMain({
         )}
       </section>
 
-      <JobMatchesSection jobMatches={jobMatches} searchParams={searchParams} />
+      <JobMatchesSection initialData={jobMatches} />
 
-      <ParameterHistorySection history={parameterHistory} searchParams={searchParams} />
+      <ParameterHistorySection initialData={parameterHistory} />
     </main>
   );
 }
@@ -88,6 +90,9 @@ export default async function Home({
     getParameterHistoryPage(searchParams.historyPage, searchParams.historyPageSize),
   ]);
 
+  const serializedJobMatches = serializeJobMatchesPage(jobMatches);
+  const serializedParameterHistory = serializeParameterHistoryPage(parameterHistory);
+
   if (data.configured) {
     return (
       <div className="flex min-h-screen flex-col bg-background text-foreground">
@@ -103,9 +108,8 @@ export default async function Home({
         >
           <DashboardMain
             data={data}
-            jobMatches={jobMatches}
-            parameterHistory={parameterHistory}
-            searchParams={searchParams}
+            jobMatches={serializedJobMatches}
+            parameterHistory={serializedParameterHistory}
           />
         </ConfiguredAgentShell>
       </div>
@@ -121,9 +125,8 @@ export default async function Home({
       </header>
       <DashboardMain
         data={data}
-        jobMatches={jobMatches}
-        parameterHistory={parameterHistory}
-        searchParams={searchParams}
+        jobMatches={serializedJobMatches}
+        parameterHistory={serializedParameterHistory}
       />
     </div>
   );
