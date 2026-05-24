@@ -15,7 +15,10 @@ vi.mock("@/lib/ai/parseResume", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/ai/parseResume")>();
   return {
     ...actual,
-    parseResume: vi.fn((resumeText: string) => Promise.resolve(actual.parseResumeHeuristic(resumeText))),
+    parseResume: vi.fn(async (resumeText: string) => ({
+      profile: actual.parseResumeHeuristic(resumeText),
+      meta: { source: "heuristic", geminiConfigured: false, geminiFailed: false },
+    })),
   };
 });
 

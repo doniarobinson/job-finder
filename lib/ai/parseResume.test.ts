@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { parseResume, parseResumeHeuristic } from "./parseResume";
+import {
+  formatResumeParseMessage,
+  parseResume,
+  parseResumeHeuristic,
+} from "./parseResume";
 
 const { isGeminiConfiguredMock, generateObjectMock } = vi.hoisted(() => ({
   isGeminiConfiguredMock: vi.fn(() => false),
@@ -26,6 +30,23 @@ describe("parseResumeHeuristic", () => {
     expect(parsed.titles).toEqual(["Staff Engineer", "Tech Lead"]);
     expect(parsed.locations).toEqual(["NYC", "Remote"]);
     expect(parsed.yearsExperience).toBe(8);
+  });
+
+  it("parses Languages line into skills", () => {
+    const parsed = parseResumeHeuristic("Languages: Python, Go, Java");
+
+    expect(parsed.skills).toEqual(["Python", "Go", "Java"]);
+  });
+
+  it("infers management titles from a manager resume", () => {
+    const parsed = parseResumeHeuristic(
+      `Experience
+Software Engineering Manager, Acme Corp
+2021 - Present
+Led a team of 8 engineers.`
+    );
+
+    expect(parsed.titles[0]).toMatch(/Software Engineering Manager/i);
   });
 
   it("infers skills and titles from resume body when lines are missing", () => {
@@ -58,6 +79,32 @@ Engineer at Acme`
   });
 });
 
+describe("formatResumeParseMessage", () => {
+  it("describes Gemini parsing", () => {
+    const message = formatResumeParseMessage(
+      { source: "gemini", geminiConfigured: true, geminiFailed: false },
+      {
+        skills: ["Python", "Go"],
+        titles: ["Engineering Manager"],
+        locations: [],
+      }
+    );
+
+    expect(message).toContain("Gemini parsed the resume");
+    expect(message).toContain("Engineering Manager");
+  });
+
+  it("describes heuristic fallback after Gemini failure", () => {
+    const message = formatResumeParseMessage(
+      { source: "heuristic", geminiConfigured: true, geminiFailed: true },
+      { skills: ["Rust"], titles: ["Staff Engineer"], locations: [] }
+    );
+
+    expect(message).toContain("Gemini resume parse failed");
+    expect(message).toContain("heuristic fallback");
+  });
+});
+
 describe("parseResume", () => {
   beforeEach(() => {
     isGeminiConfiguredMock.mockReset();
@@ -74,9 +121,14 @@ describe("parseResume", () => {
   });
 
   it("uses heuristics when Gemini is not configured", async () => {
-    const parsed = await parseResume("Skills: Go, Kubernetes");
+    const result = await parseResume("Skills: Go, Kubernetes");
 
-    expect(parsed.skills).toEqual(["Go", "Kubernetes"]);
+    expect(result.profile.skills).toEqual(["Go", "Kubernetes"]);
+    expect(result.meta).toEqual({
+      source: "heuristic",
+      geminiConfigured: false,
+      geminiFailed: false,
+    });
     expect(generateObjectMock).not.toHaveBeenCalled();
   });
 
@@ -85,19 +137,20 @@ describe("parseResume", () => {
     generateObjectMock.mockResolvedValue({
       object: {
         skills: ["Python", "Go", "Java"],
-        titles: ["Backend Engineer"],
+        titles: ["Software Engineering Manager"],
         yearsExperience: 6,
         locations: ["Remote"],
-        summary: "Backend engineer with polyglot experience.",
+        summary: "Engineering manager with polyglot experience.",
       },
     });
 
-    const parsed = await parseResume("Languages: Python, Go, Java\nBackend engineer with 6 years experience.");
+    const result = await parseResume(
+      "Languages: Python, Go, Java\nSoftware Engineering Manager with 6 years experience."
+    );
 
-    expect(parsed.skills).toEqual(["Python", "Go", "Java"]);
-    expect(parsed.titles).toEqual(["Backend Engineer"]);
-    expect(parsed.yearsExperience).toBe(6);
-    expect(parsed.locations).toContain("Remote");
+    expect(result.profile.skills).toEqual(["Python", "Go", "Java"]);
+    expect(result.profile.titles).toEqual(["Software Engineering Manager"]);
+    expect(result.meta.source).toBe("gemini");
     expect(generateObjectMock).toHaveBeenCalledOnce();
   });
 
@@ -105,8 +158,13 @@ describe("parseResume", () => {
     isGeminiConfiguredMock.mockReturnValue(true);
     generateObjectMock.mockRejectedValue(new Error("API unavailable"));
 
-    const parsed = await parseResume("Skills: Rust, Wasm");
+    const result = await parseResume("Skills: Rust, Wasm");
 
-    expect(parsed.skills).toEqual(["Rust", "Wasm"]);
+    expect(result.profile.skills).toEqual(["Rust", "Wasm"]);
+    expect(result.meta).toEqual({
+      source: "heuristic",
+      geminiConfigured: true,
+      geminiFailed: true,
+    });
   });
 });
