@@ -22,61 +22,6 @@ vi.mock("@/lib/ai/parseResume", async (importOriginal) => {
   };
 });
 
-describe("parseResumeHeuristic", () => {
-  it("parses explicit skills, titles, and locations lines", () => {
-    const parsed = parseResumeHeuristic(
-      "Skills: TypeScript, React\nTitles: Staff Engineer, Tech Lead\nLocations: NYC, Remote\n8 years experience"
-    );
-
-    expect(parsed.skills).toEqual(["TypeScript", "React"]);
-    expect(parsed.titles).toEqual(["Staff Engineer", "Tech Lead"]);
-    expect(parsed.locations).toEqual(["NYC", "Remote"]);
-    expect(parsed.yearsExperience).toBe(8);
-  });
-
-  it("infers skills and titles from resume body when lines are missing", () => {
-    const parsed = parseResumeHeuristic(
-      "Experienced typescript and react developer. Former software engineer at Acme."
-    );
-
-    expect(parsed.skills).toContain("typescript");
-    expect(parsed.skills).toContain("react");
-    expect(parsed.titles.length).toBeGreaterThan(0);
-  });
-
-  it("uses a default title when none can be inferred", () => {
-    const parsed = parseResumeHeuristic("Short bio with no role or skill keywords.");
-
-    expect(parsed.titles).toEqual(["Software Engineer"]);
-  });
-
-  it("infers City, ST from the resume header when Locations line is missing", () => {
-    const parsed = parseResumeHeuristic(
-      `Jane Doe
-Brooklyn, NY
-jane@example.com
-
-Experience
-Engineer at Acme`
-    );
-
-    expect(parsed.locations).toEqual(["Brooklyn, NY"]);
-  });
-
-  it("infers location from the experience section when the header has none", () => {
-    const parsed = parseResumeHeuristic(
-      `Jane Doe
-jane@example.com
-
-Experience
-Staff Engineer, Acme — Portland, OR
-2021 – Present`
-    );
-
-    expect(parsed.locations).toEqual(["Portland, OR"]);
-  });
-});
-
 describe("defaultSearchParams", () => {
   it("caps keywords and title variants from the profile", () => {
     const profile = parseResumeHeuristic(

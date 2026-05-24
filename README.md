@@ -40,12 +40,13 @@ The Job Finder Agent is a fully autonomous agentic AI that works on your behalf 
    npm run db:push
    ```
 
-4. Run dev + Inngest dev server (two terminals):
+4. Run the dev server:
 
    ```bash
    npm run dev
-   npm run inngest:dev
    ```
+
+   Optional — only if testing the Inngest cron path locally (`npm run inngest:dev` in a second terminal).
 
 5. Run tests:
 
@@ -69,12 +70,7 @@ The Job Finder Agent is a fully autonomous agentic AI that works on your behalf 
 
    Add `"resetSearchParams": true` to regenerate keywords and title variants from the new resume (default keeps refined params).
 
-   Or send an Inngest event:
-
-   ```bash
-   # via Inngest dev UI at http://localhost:8288
-   # event: job-finder/cycle.run
-   ```
+   Optional — with Inngest dev running, send event `job-finder/cycle.run` via the [Inngest dev UI](http://localhost:8288).
 
 7. Open [http://localhost:3000](http://localhost:3000) for the dashboard. When the database is configured, the **Agent System Information and Overrides** panel provides **Run cycle now**, **Re-bootstrap from env**, and a live **System message** feed.
 
@@ -84,6 +80,7 @@ The Job Finder Agent is a fully autonomous agentic AI that works on your behalf 
 2. Add **Neon** from [Vercel Marketplace](https://vercel.com/marketplace/neon) → Storage → Connect Project. This injects `DATABASE_URL` and `DATABASE_URL_UNPOOLED` ([docs](https://neon.com/docs/guides/vercel-managed-integration)).
 3. Install [Inngest Vercel integration](https://www.inngest.com/docs/deploy/vercel).
 4. Set `CRON_SECRET`; Vercel Cron hits `/api/cron/trigger-cycle` daily at **7:00 AM Pacific** (`0 14 * * *` UTC — aligned with PDT; during PST standard time it runs at 8:00 AM Pacific unless you change to `0 15 * * *` in `vercel.json`). Cron runs on **production only**; local and preview use the dashboard **Run cycle now** button (or `POST /api/agent/run-cycle`).
+5. Optional: set `ADMIN_SECRET` to require the `x-admin-secret` header on agent API routes (`/api/agent/pause`, `/api/agent/run-cycle`, `/api/agent/update-resume`).
 
 ## Dashboard
 
@@ -116,6 +113,8 @@ Each cycle (cron, dashboard button, or `POST /api/agent/run-cycle`):
 4. Score new jobs (Gemini embeddings or keyword overlap fallback)
 5. Refine params from high-score job descriptions (guardrails: max 5 keywords/cycle, evidence ≥ 2 jobs)
 6. Persist jobs, params, and `param_history`
+
+See [docs/agent-flow.md](docs/agent-flow.md) for the full technical sequence diagram.
 
 Pause or resume the agent via `POST /api/agent/pause` with `{ "paused": true }`.
 

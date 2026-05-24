@@ -24,8 +24,8 @@ function HeaderDescription() {
       <h1 className="text-2xl font-semibold tracking-tight">Job Finder Agent</h1>
       <p className="mt-1 text-sm leading-relaxed text-muted">
         The Job Finder Agent is a fully autonomous agentic AI that works on your behalf to find
-        jobs worth applying to. It starts with your resume - extracting your skills, target roles,
-        and location - then searches live job listings, scores each one against your background, and
+        jobs worth applying to. It starts with your resume—extracting your skills, target roles,
+        and location—then searches live job listings, scores each one against your background, and
         saves the best matches here. After every run, it learns from the listings that fit well and
         updates its search terms so the next cycle is smarter than the last.
       </p>
@@ -52,7 +52,8 @@ function DashboardMain({
       <section className="rounded-xl border border-border bg-surface p-6 shadow-sm">
         <h2 className="text-lg font-medium">Current search parameters</h2>
         <p className="mt-0.5 text-xs text-muted">
-          (Initially set by RESUME_TEXT in env file, then iterated on with each API call)
+          Seeded from your resume at bootstrap; keywords refine each agent cycle (title variants
+          reset on re-bootstrap only).
         </p>
         {data.currentParams ? (
           <SearchParamsTable
