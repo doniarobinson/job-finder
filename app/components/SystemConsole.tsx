@@ -3,8 +3,20 @@
 import { AgentControls } from "@/app/components/AgentControls";
 import { AgentStatusBadge } from "@/app/components/AgentStatusBadge";
 import { SystemMessagePanel } from "@/app/components/SystemMessage";
+import { formatScheduledCycleIdleMessage } from "@/lib/agent/cronSchedule";
 
-export function SystemConsole({ paused }: { paused: boolean }) {
+export function SystemConsole({
+  paused,
+  nextScheduledRunAt,
+}: {
+  paused: boolean;
+  nextScheduledRunAt?: string | null;
+}) {
+  const idleMessage =
+    nextScheduledRunAt != null
+      ? formatScheduledCycleIdleMessage(new Date(nextScheduledRunAt))
+      : "No agent messages yet.";
+
   return (
     <section
       aria-label="Agent System Information and Overrides"
@@ -23,7 +35,7 @@ export function SystemConsole({ paused }: { paused: boolean }) {
         </div>
 
         <div className="overflow-hidden rounded-lg border border-terminal-muted/20 bg-black/20">
-          <SystemMessagePanel embedded />
+          <SystemMessagePanel embedded idleMessage={idleMessage} />
         </div>
       </div>
     </section>

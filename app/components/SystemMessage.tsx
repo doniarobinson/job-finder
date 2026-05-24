@@ -62,7 +62,13 @@ export function useSystemMessage() {
   return context;
 }
 
-export function SystemMessagePanel({ embedded = false }: { embedded?: boolean }) {
+export function SystemMessagePanel({
+  embedded = false,
+  idleMessage = "No agent messages yet.",
+}: {
+  embedded?: boolean;
+  idleMessage?: string;
+}) {
   const { entry } = useSystemMessage();
 
   const content = embedded ? (
@@ -86,9 +92,7 @@ export function SystemMessagePanel({ embedded = false }: { embedded?: boolean })
             {entry.text}
           </p>
         ) : (
-          <p className="font-mono text-sm leading-relaxed text-terminal-muted/60">
-            No agent messages yet.
-          </p>
+          <p className="font-mono text-sm leading-relaxed text-terminal-muted/60">{idleMessage}</p>
         )}
       </div>
     </>
@@ -107,9 +111,7 @@ export function SystemMessagePanel({ embedded = false }: { embedded?: boolean })
           </p>
         </>
       ) : (
-        <p className="mt-2 font-mono text-sm leading-relaxed text-terminal-muted">
-          No agent messages yet.
-        </p>
+        <p className="mt-2 font-mono text-sm leading-relaxed text-terminal-muted">{idleMessage}</p>
       )}
     </>
   );
