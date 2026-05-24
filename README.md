@@ -8,7 +8,7 @@ Built for **Vercel/Neon** with **Inngest** orchestration and **Postgres** state.
 
 1. ~~Job listings API search needs to be hooked up~~ (Adzuna integrated)
 2. ~~Run search and update search params via the dashboard button before enabling a cron job~~ (manual run in UI)
-3. Implement a cron job to run every 24 hours
+3. ~~Implement a cron job to run every 24 hours~~ (Vercel Cron in production only; local uses manual run)
 
 ## Tech used
 
@@ -89,7 +89,7 @@ Built for **Vercel/Neon** with **Inngest** orchestration and **Postgres** state.
 1. Import the repo and add environment variables from `.env.example` (except the database — see step 2).
 2. Add **Neon** from [Vercel Marketplace](https://vercel.com/marketplace/neon) → Storage → Connect Project. This injects `DATABASE_URL` and `DATABASE_URL_UNPOOLED` ([docs](https://neon.com/docs/guides/vercel-managed-integration)). Do not use deprecated Vercel Postgres.
 3. Install [Inngest Vercel integration](https://www.inngest.com/docs/deploy/vercel).
-4. Set `CRON_SECRET`; Vercel Cron hits `/api/cron/trigger-cycle` daily at **7:00 AM Pacific** (`0 14 * * *` UTC — aligned with PDT; during PST standard time it runs at 8:00 AM Pacific unless you change to `0 15 * * *` in `vercel.json`).
+4. Set `CRON_SECRET`; Vercel Cron hits `/api/cron/trigger-cycle` daily at **7:00 AM Pacific** (`0 14 * * *` UTC — aligned with PDT; during PST standard time it runs at 8:00 AM Pacific unless you change to `0 15 * * *` in `vercel.json`). Cron runs on **production only**; local and preview use the dashboard **Run cycle now** button (or `POST /api/agent/run-cycle`).
 
 ## Agent loop
 
