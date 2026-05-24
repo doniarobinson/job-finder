@@ -1,12 +1,18 @@
+"use client";
+
+import { useMemo } from "react";
+
 import { ListPaginationFooter } from "@/app/components/ListPaginationFooter";
 import { ParameterHistoryPageSizeSelect } from "@/app/components/ParameterHistoryPageSizeSelect";
 import { SearchParamsTable } from "@/app/components/SearchParamsDisplay";
+import { useDashboardPagination } from "@/app/hooks/useDashboardPagination";
 import { epochKindLabel } from "@/lib/agent/epochs";
-import type { ParameterHistoryPage } from "@/lib/dashboard";
 import {
-  dashboardSearchHref,
-  type DashboardSearchParams,
-} from "@/lib/dashboardSearchParams";
+  deserializeParameterHistoryPage,
+  parameterHistoryUrlUpdates,
+  type SerializedParameterHistoryPage,
+} from "@/lib/dashboardPaginationApi";
+import type { ParameterHistoryPage } from "@/lib/dashboard";
 
 function EpochDivider({
   label,
@@ -60,16 +66,25 @@ function EntryHeader({ entry }: { entry: ParameterHistoryPage["entries"][number]
 }
 
 export function ParameterHistorySection({
-  history,
-  searchParams,
+  initialData,
 }: {
-  history: ParameterHistoryPage;
-  searchParams: DashboardSearchParams;
+  initialData: SerializedParameterHistoryPage;
 }) {
-  const { entries, page, pageSize, currentEpochCount, totalPages, totalCount } = history;
+  const seed = useMemo(() => deserializeParameterHistoryPage(initialData), [initialData]);
+  const { data, loading, error, setPage, setPageSize } = useDashboardPagination({
+    endpoint: "/api/parameter-history",
+    initialData: seed,
+    deserialize: (json) => deserializeParameterHistoryPage(json as SerializedParameterHistoryPage),
+    buildUrlUpdates: parameterHistoryUrlUpdates,
+  });
+
+  const { entries, page, pageSize, currentEpochCount, totalPages, totalCount } = data;
 
   return (
-    <section className="rounded-xl border border-border bg-surface p-6 shadow-sm">
+    <section
+      aria-busy={loading}
+      className={`rounded-xl border border-border bg-surface p-6 shadow-sm${loading ? " opacity-70" : ""}`}
+    >
       <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-lg font-medium">Parameter history</h2>
@@ -82,6 +97,12 @@ export function ParameterHistorySection({
           </p>
         )}
       </div>
+
+      {error && (
+        <p className="mt-2 text-sm text-rose-700" role="alert">
+          {error}
+        </p>
+      )}
 
       {entries.length === 0 ? (
         <p className="mt-2 text-sm text-muted">No parameter versions saved yet.</p>
@@ -122,20 +143,13 @@ export function ParameterHistorySection({
               ariaLabel="Parameter history pagination"
               page={page}
               totalPages={totalPages}
-              previousHref={
-                page > 1
-                  ? dashboardSearchHref(searchParams, { historyPage: page - 1 })
-                  : undefined
-              }
-              nextHref={
-                page < totalPages
-                  ? dashboardSearchHref(searchParams, { historyPage: page + 1 })
-                  : undefined
-              }
+              onPrevious={() => setPage(page - 1)}
+              onNext={() => setPage(page + 1)}
               pageSizeSelect={
                 <ParameterHistoryPageSizeSelect
-                  searchParams={searchParams}
                   pageSize={pageSize}
+                  disabled={loading}
+                  onPageSizeChange={setPageSize}
                 />
               }
             />

@@ -1,23 +1,42 @@
+"use client";
+
+import { useMemo } from "react";
+
 import { JobMatchesPageSizeSelect } from "@/app/components/JobMatchesPageSizeSelect";
 import { ListPaginationFooter } from "@/app/components/ListPaginationFooter";
+import { useDashboardPagination } from "@/app/hooks/useDashboardPagination";
 import {
-  dashboardSearchHref,
-  type DashboardSearchParams,
-} from "@/lib/dashboardSearchParams";
-import type { JobMatchesPage } from "@/lib/dashboard";
+  deserializeJobMatchesPage,
+  jobMatchesUrlUpdates,
+  type SerializedJobMatchesPage,
+} from "@/lib/dashboardPaginationApi";
 
 export function JobMatchesSection({
-  jobMatches,
-  searchParams,
+  initialData,
 }: {
-  jobMatches: JobMatchesPage;
-  searchParams: DashboardSearchParams;
+  initialData: SerializedJobMatchesPage;
 }) {
-  const { jobs, page, pageSize, totalCount, totalPages } = jobMatches;
+  const seed = useMemo(() => deserializeJobMatchesPage(initialData), [initialData]);
+  const { data, loading, error, setPage, setPageSize } = useDashboardPagination({
+    endpoint: "/api/job-matches",
+    initialData: seed,
+    deserialize: (json) => deserializeJobMatchesPage(json as SerializedJobMatchesPage),
+    buildUrlUpdates: jobMatchesUrlUpdates,
+  });
+
+  const { jobs, page, pageSize, totalCount, totalPages } = data;
 
   return (
-    <section className="rounded-xl border border-border bg-surface px-6 py-4 shadow-sm">
+    <section
+      aria-busy={loading}
+      className={`rounded-xl border border-border bg-surface px-6 py-4 shadow-sm${loading ? " opacity-70" : ""}`}
+    >
       <h2 className="text-lg font-medium">Job matches</h2>
+      {error && (
+        <p className="mt-2 text-sm text-rose-700" role="alert">
+          {error}
+        </p>
+      )}
       {jobs.length === 0 ? (
         <p className="mt-2 text-sm text-muted">No jobs stored yet for the current era.</p>
       ) : (
@@ -54,18 +73,14 @@ export function JobMatchesSection({
               className="mt-4 space-y-2 border-t border-border-subtle pt-3"
               page={page}
               totalPages={totalPages}
-              previousHref={
-                page > 1
-                  ? dashboardSearchHref(searchParams, { jobsPage: page - 1 })
-                  : undefined
-              }
-              nextHref={
-                page < totalPages
-                  ? dashboardSearchHref(searchParams, { jobsPage: page + 1 })
-                  : undefined
-              }
+              onPrevious={() => setPage(page - 1)}
+              onNext={() => setPage(page + 1)}
               pageSizeSelect={
-                <JobMatchesPageSizeSelect searchParams={searchParams} pageSize={pageSize} />
+                <JobMatchesPageSizeSelect
+                  pageSize={pageSize}
+                  disabled={loading}
+                  onPageSizeChange={setPageSize}
+                />
               }
             />
           )}
