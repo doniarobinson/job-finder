@@ -7,10 +7,12 @@ import type { ReactNode } from "react";
 export function ConfiguredAgentShell({
   headerDescription,
   paused,
+  nextScheduledRunAt,
   children,
 }: {
   headerDescription: ReactNode;
   paused: boolean;
+  nextScheduledRunAt?: string | null;
   children: ReactNode;
 }) {
   return (
@@ -21,7 +23,7 @@ export function ConfiguredAgentShell({
         </div>
       </header>
 
-      <SystemConsole paused={paused} />
+      <SystemConsole paused={paused} nextScheduledRunAt={nextScheduledRunAt} />
 
       {children}
     </SystemMessageProvider>

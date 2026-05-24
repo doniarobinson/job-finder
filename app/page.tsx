@@ -7,6 +7,7 @@ import { JobMatchesSection } from "@/app/components/JobMatchesSection";
 import { ParameterHistorySection } from "@/app/components/ParameterHistorySection";
 import { SearchParamsTable } from "@/app/components/SearchParamsDisplay";
 import { TechStackList } from "@/app/components/TechStackList";
+import { getNextScheduledCycleRun } from "@/lib/agent/cronSchedule";
 import { getDashboardData, getJobMatchesPage, getParameterHistoryPage } from "@/lib/dashboard";
 import {
   serializeJobMatchesPage,
@@ -93,11 +94,16 @@ export default async function Home({
 
   const serializedJobMatches = serializeJobMatchesPage(jobMatches);
   const serializedParameterHistory = serializeParameterHistoryPage(parameterHistory);
+  const nextScheduledRunAt = getNextScheduledCycleRun()?.toISOString() ?? null;
 
   if (data.configured) {
     return (
       <div className="flex min-h-screen flex-col bg-background text-foreground">
-        <ConfiguredAgentShell headerDescription={<HeaderDescription />} paused={data.paused}>
+        <ConfiguredAgentShell
+          headerDescription={<HeaderDescription />}
+          paused={data.paused}
+          nextScheduledRunAt={nextScheduledRunAt}
+        >
           <DashboardMain
             data={data}
             jobMatches={serializedJobMatches}

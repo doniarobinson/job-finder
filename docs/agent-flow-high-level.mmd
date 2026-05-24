@@ -1,0 +1,23 @@
+flowchart TD
+    Resume([Your resume]) --> Understand[Agent learns your skills,<br/>target roles, and location]
+
+    Understand --> Search[Search live job listings]
+
+    Search --> Match[Score each job<br/>against your background]
+
+    Match --> Dashboard[Save the best matches<br/>to your dashboard]
+
+    Dashboard --> Review([You review matches<br/>and choose what to apply to])
+
+    Match --> Improve[Learn from jobs that fit well]
+
+    Improve --> Smarter[Update search terms]
+
+    Smarter --> Search
+
+    Schedule[Runs once a day automatically<br/>or anytime you click Run cycle now] -.-> Search
+
+    style Resume fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
+    style Review fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
+    style Dashboard fill:#dcfce7,stroke:#16a34a,color:#14532d
+    style Schedule fill:#fef9c3,stroke:#ca8a04,color:#713f12

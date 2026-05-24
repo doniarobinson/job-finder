@@ -8,62 +8,83 @@ sequenceDiagram
     participant ManualAPI as /api/agent/run-cycle
     participant Inngest as Inngest
     participant Agent as runSearchCycle
+    participant Profile as lib/profile
+    participant Parser as parseResume
     participant Neon as Neon Postgres
     participant Adzuna as Adzuna API
     participant Gemini as Google Gemini
 
-    Note over User,Gemini: Scheduled agent cycle (daily 7am PT via vercel.json)
+    Note over User,Gemini: Production schedule (daily 7am PT via vercel.json)
 
-    Cron->>CronAPI: GET (Bearer CRON_SECRET)
-    CronAPI->>Inngest: send event job-finder/cycle.run
-    CronAPI-->>Cron: 200 triggered
+    Cron->>CronAPI: GET Bearer CRON_SECRET
+    alt Not production deployment
+        CronAPI-->>Cron: 403 scheduler disabled
+    else Production
+        CronAPI->>Inngest: send event job-finder/cycle.run
+        CronAPI-->>Cron: 200 triggered
+        Inngest->>Agent: step run-search-cycle
+    end
 
-    Inngest->>Agent: step run-search-cycle
+    Note over User,Gemini: Manual cycle (local dev / one-off — bypasses Inngest)
+
+    User->>Dashboard: Run cycle now
+    Dashboard->>Agent: triggerAgentCycle server action
+    User->>ManualAPI: POST /api/agent/run-cycle
+    ManualAPI->>Agent: runSearchCycle direct
+
     activate Agent
 
-    Agent->>Neon: read agent_settings (paused?)
+    Agent->>Neon: read agent_settings paused?
     alt Agent paused
-        Agent-->>Inngest: skip cycle
+        Agent-->>Dashboard: skip cycle
     else Agent active
         Agent->>Neon: ensureBootstrapProfile
-        Note right of Neon: First run reads RESUME_TEXT env, inserts profile + search_params
+        Note right of Neon: First run only reads RESUME_TEXT,<br/>parseResume seeds profile + search_params
 
-        Agent->>Neon: load profile + current search_params
-        Agent->>Adzuna: search jobs (keywords, location)
+        Agent->>Neon: load profile + search_params for current era
+        Agent->>Adzuna: search titleVariants + keywords + location
         Adzuna-->>Agent: job listings
 
-        Agent->>Neon: dedupe by url_hash (skip seen)
+        Agent->>Neon: dedupe by url_hash within current era
         Agent->>Gemini: embed resume + job descriptions
-        Note right of Gemini: gemini-embedding-001 or keyword fallback
+        Note right of Gemini: gemini-embedding-001<br/>or keyword overlap fallback
         Gemini-->>Agent: similarity scores
 
         Agent->>Neon: insert new jobs with scores
 
-        Agent->>Gemini: refineSearchParams (high-score JDs)
-        Note right of Gemini: gemini-2.5-flash or heuristic extraction
-        Gemini-->>Agent: keyword suggestions
+        Agent->>Gemini: refineSearchParams on high-score JDs
+        Note right of Gemini: gemini-2.5-flash adds keywords only<br/>title variants unchanged after bootstrap
+        Gemini-->>Agent: keyword / negative keyword suggestions
 
-        alt Params changed (guardrails pass)
+        alt Params changed guardrails pass
             Agent->>Neon: update search_params + param_history
         end
 
-        Agent-->>Inngest: cycle result
+        Agent-->>Dashboard: cycle result to system message
     end
+
     deactivate Agent
 
-    Note over User,Gemini: Manual cycle (dev / one-off)
+    Note over User,Gemini: Re-bootstrap from env (dashboard)
 
-    User->>ManualAPI: POST /api/agent/run-cycle
-    ManualAPI->>Agent: runSearchCycle (direct)
-    Agent->>Neon: same loop as above
-    ManualAPI-->>User: JSON result
+    User->>Dashboard: Re-bootstrap from env
+    Dashboard->>Profile: rebootstrapProfileFromEnv
+    Profile->>Parser: parseResume RESUME_TEXT
+    alt Gemini configured
+        Parser->>Gemini: gemini-2.5-flash structured extract
+        Gemini-->>Parser: skills titles locations
+    else No key or API failure
+        Parser->>Parser: heuristic fallback
+    end
+    Profile->>Neon: update profile start new agent era reset search_params
+    Dashboard-->>User: system message reports parse source + extracted fields
 
-    Note over User,Neon: Dashboard (read-only UI)
+    Note over User,Neon: Dashboard read + controls
 
     User->>Dashboard: GET /
-    Dashboard->>Neon: jobs, search_params, param_history, paused flag
-    Neon-->>Dashboard: data
-    Dashboard-->>User: matches, params, pause/resume
+    Dashboard->>Neon: jobs search_params param_history paused flag for current era
+    Neon-->>Dashboard: paginated data
+    Dashboard-->>User: matches params system console
 
     User->>Dashboard: Pause / Resume
     Dashboard->>Neon: POST /api/agent/pause updates agent_settings
